@@ -2,6 +2,19 @@
 name = "serde_amp"
 version = "0.1.0"
 authors = ["Paul Hummer <paul@eventuallyanyway.com>"]
+license = "MIT/Apache-2.0"
+description = "Serialization/deserialization tooling for Asynchronous Messaging Protocol"
+repository = "https://github.com/rockstar/serde_amp"
+keywords = ["serde", "serialization", "amp"]
+categories = ["encoding"]
+readme = "README.md"
+include = [
+    "src/*.rs",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE-MIT",
+    "LICENSE-APACHE",
+]
 
 [dependencies]
 byteorder = ">= 1.2.1"
