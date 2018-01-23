@@ -37,14 +37,18 @@ pub fn from_bytes<'a, T>(bytes: &'a [u8]) -> Result<T>
 
 impl<'de> Deserializer<'de> {
 
-    fn read_length(&mut self) -> Result<u16> {
+    fn peek_length(&self) -> Result<u16> {
         let mut bytes : [u8; 2] = [0, 0];
         bytes[0] = self.input[self.index];
         bytes[1] = self.input[self.index+1];
-        self.index += 2;
 
         let length = bytes_to_usize(bytes);
         Ok(length as u16)
+    }
+    fn read_length(&mut self) -> Result<u16> {
+        let length = self.peek_length();
+        self.index += 2;
+        length
     }
     fn read_str(&mut self, count: u16) -> Result<&'de str> {
         let new_value = self.index+count as usize;
@@ -67,7 +71,8 @@ impl<'de> Deserializer<'de> {
         Ok(value)
     }
     fn done(&self) -> bool {
-        self.input.len() <= self.index
+        let length = self.peek_length().unwrap();
+        length == 0
     }
 }
 
@@ -341,7 +346,7 @@ impl <'a, 'de> MapAccess<'de> for AmpAccess<'a, 'de> {
 
 #[test]
 fn test_deserialize_true() {
-    let value = [0 as u8, 4 as u8, 'T' as u8, 'r' as u8, 'u' as u8, 'e' as u8];
+    let value = [0 as u8, 4 as u8, 'T' as u8, 'r' as u8, 'u' as u8, 'e' as u8, 0 as u8, 0 as u8];
     let expected = true;
     let actual : bool = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -350,7 +355,7 @@ fn test_deserialize_true() {
 #[test]
 fn test_deserialize_false() {
     let value = [
-        0 as u8, 5 as u8, 'F' as u8, 'a' as u8, 'l' as u8, 's' as u8, 'e' as u8];
+        0 as u8, 5 as u8, 'F' as u8, 'a' as u8, 'l' as u8, 's' as u8, 'e' as u8, 0 as u8, 0 as u8];
     let expected = false;
     let actual : bool = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -358,7 +363,7 @@ fn test_deserialize_false() {
 
 #[test]
 fn test_deserialize_i8() {
-    let value = [0 as u8, 3 as u8, '-' as u8, '1' as u8, '5' as u8];
+    let value = [0 as u8, 3 as u8, '-' as u8, '1' as u8, '5' as u8, 0 as u8, 0 as u8];
     let expected = -15;
     let actual : i8 = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -367,7 +372,7 @@ fn test_deserialize_i8() {
 #[test]
 fn test_deserialize_i16() {
     let value = [
-        0 as u8, 5 as u8, '-' as u8, '7' as u8, '1' as u8, '9' as u8, '4' as u8];
+        0 as u8, 5 as u8, '-' as u8, '7' as u8, '1' as u8, '9' as u8, '4' as u8, 0 as u8, 0 as u8];
     let expected = -7194;
     let actual : i16 = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -376,7 +381,7 @@ fn test_deserialize_i16() {
 #[test]
 fn test_deserialize_i32() {
     let value = [
-        0 as u8, 6 as u8, '-' as u8, '7' as u8, '1' as u8, '9' as u8, '4' as u8, '9' as u8];
+        0 as u8, 6 as u8, '-' as u8, '7' as u8, '1' as u8, '9' as u8, '4' as u8, '9' as u8, 0 as u8, 0 as u8];
     let expected = -71949;
     let actual : i32 = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -386,7 +391,7 @@ fn test_deserialize_i32() {
 fn test_deserialize_i64() {
     let value = [
         0 as u8, 7 as u8, '-' as u8, '9' as u8, '6' as u8, '5' as u8,
-        '5' as u8, '3' as u8, '7' as u8];
+        '5' as u8, '3' as u8, '7' as u8, 0 as u8, 0 as u8];
     let expected = -965537;
     let actual : i64 = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -395,7 +400,7 @@ fn test_deserialize_i64() {
 
 #[test]
 fn test_deserialize_u8() {
-    let value = [0 as u8, 3 as u8, '2' as u8, '5' as u8, '5' as u8];
+    let value = [0 as u8, 3 as u8, '2' as u8, '5' as u8, '5' as u8, 0 as u8, 0 as u8];
     let expected = 255;
     let actual : u8 = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -404,7 +409,7 @@ fn test_deserialize_u8() {
 #[test]
 fn test_deserialize_u16() {
     let value = [
-        0 as u8, 5 as u8, '6' as u8, '5' as u8, '5' as u8, '3' as u8, '5' as u8];
+        0 as u8, 5 as u8, '6' as u8, '5' as u8, '5' as u8, '3' as u8, '5' as u8, 0 as u8, 0 as u8];
     let expected = 65535;
     let actual : u16 = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -413,7 +418,7 @@ fn test_deserialize_u16() {
 #[test]
 fn test_deserialize_u32() {
     let value = [
-        0 as u8, 5 as u8, '6' as u8, '5' as u8, '5' as u8, '3' as u8, '7' as u8];
+        0 as u8, 5 as u8, '6' as u8, '5' as u8, '5' as u8, '3' as u8, '7' as u8, 0 as u8, 0 as u8];
     let expected = 65537;
     let actual : u32 = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -423,7 +428,7 @@ fn test_deserialize_u32() {
 fn test_deserialize_u64() {
     let value = [
         0 as u8, 7 as u8, '2' as u8, '9' as u8, '6' as u8, '5' as u8,
-        '5' as u8, '3' as u8, '7' as u8];
+        '5' as u8, '3' as u8, '7' as u8, 0 as u8, 0 as u8];
     let expected = 2965537;
     let actual : u64 = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -431,7 +436,7 @@ fn test_deserialize_u64() {
 
 #[test]
 fn test_deserialize_f32() {
-    let value = [0 as u8, 4 as u8, '1' as u8, '2' as u8, '.' as u8, '9' as u8];
+    let value = [0 as u8, 4 as u8, '1' as u8, '2' as u8, '.' as u8, '9' as u8, 0 as u8, 0 as u8];
     let expected = 12.9;
     let actual : f32 = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -439,7 +444,7 @@ fn test_deserialize_f32() {
 
 #[test]
 fn test_deserialize_f64() {
-    let value = [0 as u8, 4 as u8, '1' as u8, '2' as u8, '.' as u8, '9' as u8];
+    let value = [0 as u8, 4 as u8, '1' as u8, '2' as u8, '.' as u8, '9' as u8, 0 as u8, 0 as u8];
     let expected = 12.9;
     let actual : f64 = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -447,7 +452,7 @@ fn test_deserialize_f64() {
 
 #[test]
 fn test_deserialize_char() {
-    let value = [0 as u8, 1 as u8, 'a' as u8];
+    let value = [0 as u8, 1 as u8, 'a' as u8, 0 as u8, 0 as u8];
     let expected = 'a';
     let actual : char = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -455,7 +460,7 @@ fn test_deserialize_char() {
 
 #[test]
 fn test_deserialize_str() {
-    let value = [0 as u8, 4 as u8, 't' as u8, 'e' as u8, 's' as u8, 't' as u8];
+    let value = [0 as u8, 4 as u8, 't' as u8, 'e' as u8, 's' as u8, 't' as u8, 0 as u8, 0 as u8];
     let expected = "test";
     let actual : &str = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -463,7 +468,7 @@ fn test_deserialize_str() {
 
 #[test]
 fn test_deserialize_string() {
-    let value = [0 as u8, 4 as u8, 't' as u8, 'e' as u8, 's' as u8, 't' as u8];
+    let value = [0 as u8, 4 as u8, 't' as u8, 'e' as u8, 's' as u8, 't' as u8, 0 as u8, 0 as u8];
     let expected = "test".to_string();
     let actual : String = from_bytes(&value).unwrap();
     assert_eq!(expected, actual);
@@ -485,7 +490,8 @@ fn test_deserialize_struct() {
         0 as u8, 4 as u8,
         'n' as u8, 'a' as u8, 'm' as u8, 'e' as u8,
         0 as u8, 7 as u8,
-        'a' as u8, 'n' as u8, '-' as u8, 'n' as u8, 'a' as u8, 'm' as u8, 'e' as u8
+        'a' as u8, 'n' as u8, '-' as u8, 'n' as u8, 'a' as u8, 'm' as u8, 'e' as u8,
+        0 as u8, 0 as u8
     ];
 
     let actual : TestStruct = from_bytes(&value).unwrap();
