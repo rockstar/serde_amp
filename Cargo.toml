@@ -1,0 +1,11 @@
+[package]
+name = "serde_amp"
+version = "0.1.0"
+authors = ["Paul Hummer <paul@eventuallyanyway.com>"]
+
+[dependencies]
+byteorder = ">= 1.2.1"
+serde = ">= 1.0"
+
+[dev-dependencies]
+serde_derive = "1.0.27"
