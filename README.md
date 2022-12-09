@@ -1,6 +1,8 @@
 serde_amp
 ==
 
+![build-and-check](https://github.com/rockstar/serde_amp/actions/workflows/build-and-check.yml/badge.svg) ![crates.io](https://img.shields.io/crates/v/serde_amp.svg)
+
 A serialization/deserialization library for [Asynchronous Messaging Protocol](https://amp-protocol.net/)
 
 Usage
