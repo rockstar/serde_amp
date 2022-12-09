@@ -1,4 +1,4 @@
-use std;
+use std::convert::TryInto;
 
 use byteorder::{BigEndian, WriteBytesExt};
 use serde::{ser, Serialize};
@@ -10,9 +10,12 @@ fn usize_to_bytes(integer: usize) -> [u8; 2] {
         panic!("Key length in response too long");
     }
 
-    let mut bytearray = vec![];
+    let mut bytearray = Vec::with_capacity(2);
     bytearray.write_u16::<BigEndian>(integer as u16).unwrap();
-    [bytearray[0], bytearray[1]]
+    match bytearray.try_into() {
+        Ok(value) => value,
+        Err(err) => panic!("{:?}", err),
+    }
 }
 
 struct Serializer {
