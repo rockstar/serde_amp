@@ -1,9 +1,3 @@
-extern crate byteorder;
-extern crate serde;
-#[cfg(test)]
-#[macro_use]
-extern crate serde_derive;
-
 mod de;
 mod error;
 mod ser;
@@ -11,6 +5,9 @@ mod ser;
 pub use de::from_bytes;
 pub use error::Error;
 pub use ser::to_amp;
+
+#[cfg(test)]
+use serde::{Deserialize, Serialize};
 
 #[test]
 fn test_struct_serialize_deserialize() {

@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use byteorder::{BigEndian, WriteBytesExt};
 use serde::{ser, Serialize};
 
-use error::{Error, Result};
+use crate::error::{Error, Result};
 
 fn usize_to_bytes(integer: usize) -> [u8; 2] {
     if integer > std::u16::MAX as usize {

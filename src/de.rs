@@ -2,9 +2,10 @@ use std::str;
 
 use byteorder::{BigEndian, ByteOrder};
 use serde::de;
-use serde::de::{Deserialize, DeserializeSeed, MapAccess, Visitor};
+use serde::de::{DeserializeSeed, MapAccess, Visitor};
+use serde::Deserialize;
 
-use error::{Error, Result};
+use crate::error::{Error, Result};
 
 struct Deserializer<'de> {
     index: usize,
