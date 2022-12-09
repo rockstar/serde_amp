@@ -1,17 +1,11 @@
-use std::io::Cursor;
 use std::str;
 
-use byteorder::{BigEndian, ReadBytesExt};
+use byteorder::{BigEndian, ByteOrder};
 use serde::de;
 use serde::de::{Deserialize, DeserializeSeed, MapAccess, Visitor};
 
 use error::{Error, Result};
 
-fn bytes_to_usize(bytes: [u8; 2]) -> usize {
-    let mut reader = Cursor::new(bytes);
-    let integer = reader.read_u16::<BigEndian>().unwrap();
-    integer as usize
-}
 
 struct Deserializer<'de> {
     index: usize,
@@ -42,8 +36,8 @@ impl<'de> Deserializer<'de> {
         bytes[0] = self.input[self.index];
         bytes[1] = self.input[self.index+1];
 
-        let length = bytes_to_usize(bytes);
-        Ok(length as u16)
+        let length = BigEndian::read_u16(&bytes);
+        Ok(length)
     }
     fn read_length(&mut self) -> Result<u16> {
         let length = self.peek_length();
