@@ -1,7 +1,7 @@
 [package]
 name = "serde_amp"
 edition = "2021"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Paul Hummer <paul@eventuallyanyway.com>"]
 license = "MIT/Apache-2.0"
 description = "Serialization/deserialization tooling for Asynchronous Messaging Protocol"
