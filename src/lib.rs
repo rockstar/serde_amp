@@ -4,13 +4,13 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
+mod de;
 mod error;
 mod ser;
-mod de;
 
+pub use de::from_bytes;
 pub use error::Error;
 pub use ser::to_amp;
-pub use de:: from_bytes;
 
 #[test]
 fn test_struct_serialize_deserialize() {
@@ -20,8 +20,11 @@ fn test_struct_serialize_deserialize() {
         name: String,
     }
 
-    let data = TestStruct { value: 83, name: "Kilroy".to_string() };
-    let result : TestStruct = from_bytes(&to_amp(&data).unwrap()[..]).unwrap();
+    let data = TestStruct {
+        value: 83,
+        name: "Kilroy".to_string(),
+    };
+    let result: TestStruct = from_bytes(&to_amp(&data).unwrap()[..]).unwrap();
     assert_eq!(data.value, result.value);
     assert_eq!(data.name, result.name);
 }

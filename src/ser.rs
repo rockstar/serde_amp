@@ -1,7 +1,7 @@
 use std;
 
 use byteorder::{BigEndian, WriteBytesExt};
-use serde::{Serialize, ser};
+use serde::{ser, Serialize};
 
 use error::{Error, Result};
 
@@ -34,14 +34,19 @@ impl Serializer {
 }
 
 pub fn to_amp<T>(value: &T) -> Result<Vec<u8>>
-        where T: ser::Serialize {
-    let mut serializer = Serializer { byte_indexes: vec![], output: vec![] };
+where
+    T: ser::Serialize,
+{
+    let mut serializer = Serializer {
+        byte_indexes: vec![],
+        output: vec![],
+    };
     value.serialize(&mut serializer)?;
     serializer.end();
     Ok(serializer.output)
 }
 
-impl <'a> ser::Serializer for &'a mut Serializer {
+impl<'a> ser::Serializer for &'a mut Serializer {
     type Ok = ();
     type Error = Error;
 
@@ -115,7 +120,8 @@ impl <'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_some<T>(self, value: &T) -> Result<()>
-        where T: ?Sized + ser::Serialize
+    where
+        T: ?Sized + ser::Serialize,
     {
         value.serialize(self)
     }
@@ -125,22 +131,30 @@ impl <'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_unit_variant(
-        self, _name: &'static str, _variant_index: u32, variant: &'static str
+        self,
+        _name: &'static str,
+        _variant_index: u32,
+        variant: &'static str,
     ) -> Result<()> {
         self.serialize_str(variant)
     }
 
     fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<()>
-        where T: ?Sized + ser::Serialize
+    where
+        T: ?Sized + ser::Serialize,
     {
         value.serialize(self)
     }
 
     fn serialize_newtype_variant<T>(
-        self, _name: &'static str, _variant_index: u32, _variant: &'static str,
-        _value: &T
+        self,
+        _name: &'static str,
+        _variant_index: u32,
+        _variant: &'static str,
+        _value: &T,
     ) -> Result<()>
-        where T: ?Sized + ser::Serialize
+    where
+        T: ?Sized + ser::Serialize,
     {
         unimplemented!();
     }
@@ -149,7 +163,10 @@ impl <'a> ser::Serializer for &'a mut Serializer {
         self.serialize_seq(Some(len))
     }
     fn serialize_tuple_struct(
-        self, _name: &'static str, len: usize) -> Result<Self::SerializeTupleStruct> {
+        self,
+        _name: &'static str,
+        len: usize,
+    ) -> Result<Self::SerializeTupleStruct> {
         self.serialize_seq(Some(len))
     }
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq> {
@@ -158,15 +175,16 @@ impl <'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_tuple_variant(
-        self, _name: &'static str, _variant_index: u32, _variant: &'static str,
-        _len: usize
+        self,
+        _name: &'static str,
+        _variant_index: u32,
+        _variant: &'static str,
+        _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
         unimplemented!();
     }
 
-    fn serialize_struct(
-        self, _name: &'static str, len: usize
-    ) -> Result<Self::SerializeStruct> {
+    fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self::SerializeStruct> {
         self.serialize_map(Some(len))
     }
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
@@ -174,8 +192,11 @@ impl <'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_struct_variant(
-        self, _name: &'static str, _variant_index: u32, _variant: &'static str,
-        _len: usize
+        self,
+        _name: &'static str,
+        _variant_index: u32,
+        _variant: &'static str,
+        _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
         unimplemented!();
     }
@@ -190,7 +211,8 @@ impl<'a> ser::SerializeSeq for &'a mut Serializer {
     type Error = Error;
 
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
-        where T: ?Sized + ser::Serialize
+    where
+        T: ?Sized + ser::Serialize,
     {
         value.serialize(&mut **self)
     }
@@ -202,7 +224,7 @@ impl<'a> ser::SerializeSeq for &'a mut Serializer {
         let bytes = usize_to_bytes(count);
 
         self.output.insert(index, bytes[0]);
-        self.output.insert(index+1, bytes[1]);
+        self.output.insert(index + 1, bytes[1]);
 
         Ok(())
     }
@@ -213,7 +235,8 @@ impl<'a> ser::SerializeTuple for &'a mut Serializer {
     type Error = Error;
 
     fn serialize_element<T>(&mut self, _value: &T) -> Result<()>
-        where T: ?Sized + ser::Serialize
+    where
+        T: ?Sized + ser::Serialize,
     {
         unimplemented!();
     }
@@ -228,7 +251,8 @@ impl<'a> ser::SerializeTupleStruct for &'a mut Serializer {
     type Error = Error;
 
     fn serialize_field<T>(&mut self, _value: &T) -> Result<()>
-        where T: ?Sized + ser::Serialize
+    where
+        T: ?Sized + ser::Serialize,
     {
         unimplemented!();
     }
@@ -243,7 +267,8 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
     type Error = Error;
 
     fn serialize_field<T>(&mut self, _value: &T) -> Result<()>
-        where T: ?Sized + ser::Serialize
+    where
+        T: ?Sized + ser::Serialize,
     {
         unimplemented!();
     }
@@ -258,12 +283,16 @@ impl<'a> ser::SerializeMap for &'a mut Serializer {
     type Error = Error;
 
     fn serialize_key<T>(&mut self, _key: &T) -> Result<()>
-        where T: ?Sized + ser::Serialize {
+    where
+        T: ?Sized + ser::Serialize,
+    {
         unimplemented!();
     }
 
     fn serialize_value<T>(&mut self, _value: &T) -> Result<()>
-        where T: ?Sized + ser::Serialize {
+    where
+        T: ?Sized + ser::Serialize,
+    {
         unimplemented!();
     }
 
@@ -277,7 +306,9 @@ impl<'a> ser::SerializeStruct for &'a mut Serializer {
     type Error = Error;
 
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
-        where T: ?Sized + ser::Serialize {
+    where
+        T: ?Sized + ser::Serialize,
+    {
         key.serialize(&mut **self)?;
         value.serialize(&mut **self)
     }
@@ -292,7 +323,9 @@ impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
     type Error = Error;
 
     fn serialize_field<T>(&mut self, _key: &'static str, _value: &T) -> Result<()>
-        where T: ?Sized + ser::Serialize {
+    where
+        T: ?Sized + ser::Serialize,
+    {
         unimplemented!();
     }
 
@@ -304,23 +337,15 @@ impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
 #[test]
 fn test_serialize_bool_true() {
     let expected = vec![
-        0 as u8, 4 as u8,
-        'T' as u8, 'r' as u8, 'u' as u8, 'e' as u8,
-        0 as u8, 0 as u8];
+        0 as u8, 4 as u8, 'T' as u8, 'r' as u8, 'u' as u8, 'e' as u8, 0 as u8, 0 as u8,
+    ];
     assert_eq!(expected, to_amp(&true).unwrap());
 }
 #[test]
 fn test_serialize_bool_false() {
     let expected = vec![
-        0 as u8,
-        5 as u8,
-        'F' as u8,
-        'a' as u8,
-        'l' as u8,
-        's' as u8,
-        'e' as u8,
-        0 as u8,
-        0 as u8];
+        0 as u8, 5 as u8, 'F' as u8, 'a' as u8, 'l' as u8, 's' as u8, 'e' as u8, 0 as u8, 0 as u8,
+    ];
     assert_eq!(expected, to_amp(&false).unwrap());
 }
 #[test]
@@ -333,19 +358,8 @@ fn test_serialize_char() {
 fn test_serialize_str() {
     let an_str = "An string";
     let expected = vec![
-        0 as u8,
-        9 as u8,
-        'A' as u8,
-        'n' as u8,
-        ' ' as u8,
-        's' as u8,
-        't' as u8,
-        'r' as u8,
-        'i' as u8,
-        'n' as u8,
-        'g' as u8,
-        0 as u8,
-        0 as u8,
+        0 as u8, 9 as u8, 'A' as u8, 'n' as u8, ' ' as u8, 's' as u8, 't' as u8, 'r' as u8,
+        'i' as u8, 'n' as u8, 'g' as u8, 0 as u8, 0 as u8,
     ];
     assert_eq!(expected, to_amp(&an_str).unwrap());
 }
@@ -359,21 +373,16 @@ fn test_serialize_u8() {
 #[test]
 fn test_serialize_u16() {
     let number: u16 = 100;
-    let expected = vec![0 as u8, 3 as u8, '1' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8];
+    let expected = vec![
+        0 as u8, 3 as u8, '1' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
+    ];
     assert_eq!(expected, to_amp(&number).unwrap());
 }
 #[test]
 fn test_serialize_u32() {
     let number: u32 = 1000;
     let expected = vec![
-        0 as u8,
-        4 as u8,
-        '1' as u8,
-        '0' as u8,
-        '0' as u8,
-        '0' as u8,
-        0 as u8,
-        0 as u8,
+        0 as u8, 4 as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
     ];
     assert_eq!(expected, to_amp(&number).unwrap());
 }
@@ -381,15 +390,7 @@ fn test_serialize_u32() {
 fn test_serialize_u64() {
     let number: u64 = 10000;
     let expected = vec![
-        0 as u8,
-        5 as u8,
-        '1' as u8,
-        '0' as u8,
-        '0' as u8,
-        '0' as u8,
-        '0' as u8,
-        0 as u8,
-        0 as u8,
+        0 as u8, 5 as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
     ];
     assert_eq!(expected, to_amp(&number).unwrap());
 }
@@ -397,38 +398,51 @@ fn test_serialize_u64() {
 #[test]
 fn test_serialize_i8() {
     let number: i8 = -10;
-    let expected = vec![0 as u8, 3 as u8, '-' as u8, '1' as u8, '0' as u8, 0 as u8, 0 as u8];
+    let expected = vec![
+        0 as u8, 3 as u8, '-' as u8, '1' as u8, '0' as u8, 0 as u8, 0 as u8,
+    ];
     assert_eq!(expected, to_amp(&number).unwrap());
 }
 #[test]
 fn test_serialize_i16() {
     let number: i16 = -100;
-    let expected = vec![0 as u8, 4 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8];
+    let expected = vec![
+        0 as u8, 4 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
+    ];
     assert_eq!(expected, to_amp(&number).unwrap());
 }
 #[test]
 fn test_serialize_i32() {
     let number: i32 = -1000;
-    let expected = vec![0 as u8, 5 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8];
+    let expected = vec![
+        0 as u8, 5 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
+    ];
     assert_eq!(expected, to_amp(&number).unwrap());
 }
 #[test]
 fn test_serialize_i64() {
     let number: i64 = -10000;
-    let expected = vec![0 as u8, 6 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8];
+    let expected = vec![
+        0 as u8, 6 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, '0' as u8,
+        0 as u8, 0 as u8,
+    ];
     assert_eq!(expected, to_amp(&number).unwrap());
 }
 
 #[test]
 fn test_serialize_f32() {
     let number: f32 = 1.5;
-    let expected = vec![0 as u8, 3 as u8, '1' as u8, '.' as u8, '5' as u8, 0 as u8, 0 as u8];
+    let expected = vec![
+        0 as u8, 3 as u8, '1' as u8, '.' as u8, '5' as u8, 0 as u8, 0 as u8,
+    ];
     assert_eq!(expected, to_amp(&number).unwrap());
 }
 #[test]
 fn test_serialize_f64() {
     let number: f64 = 10.5;
-    let expected = vec![0 as u8, 4 as u8, '1' as u8, '0' as u8, '.' as u8, '5' as u8, 0 as u8, 0 as u8];
+    let expected = vec![
+        0 as u8, 4 as u8, '1' as u8, '0' as u8, '.' as u8, '5' as u8, 0 as u8, 0 as u8,
+    ];
     assert_eq!(expected, to_amp(&number).unwrap());
 }
 
@@ -442,42 +456,15 @@ fn test_some() {
 #[test]
 fn test_struct() {
     let expected = vec![
-        0 as u8,
-        5 as u8,
-        'v' as u8,
-        'a' as u8,
-        'l' as u8,
-        'u' as u8,
-        'e' as u8,
-        0 as u8,
-        2 as u8,
-        '1' as u8,
-        '0' as u8,
-        0 as u8,
-        6 as u8,
-        'n' as u8,
-        'e' as u8,
-        's' as u8,
-        't' as u8,
-        'e' as u8,
-        'd' as u8,
-        0 as u8,
-        5 as u8,
-        'i' as u8,
-        'n' as u8,
-        'n' as u8,
-        'e' as u8,
-        'r' as u8,
-        0 as u8,
-        1 as u8,
-        '1' as u8,
-        0 as u8,
-        0 as u8,
+        0 as u8, 5 as u8, 'v' as u8, 'a' as u8, 'l' as u8, 'u' as u8, 'e' as u8, 0 as u8, 2 as u8,
+        '1' as u8, '0' as u8, 0 as u8, 6 as u8, 'n' as u8, 'e' as u8, 's' as u8, 't' as u8,
+        'e' as u8, 'd' as u8, 0 as u8, 5 as u8, 'i' as u8, 'n' as u8, 'n' as u8, 'e' as u8,
+        'r' as u8, 0 as u8, 1 as u8, '1' as u8, 0 as u8, 0 as u8,
     ];
 
     #[derive(Serialize)]
     struct NestedStruct {
-        inner: usize
+        inner: usize,
     }
 
     #[derive(Serialize)]
@@ -486,25 +473,18 @@ fn test_struct() {
         nested: NestedStruct,
     }
 
-    let value = TestStruct { value: 10 , nested: NestedStruct { inner: 1 } };
+    let value = TestStruct {
+        value: 10,
+        nested: NestedStruct { inner: 1 },
+    };
     assert_eq!(expected, to_amp(&value).unwrap());
 }
 
 #[test]
 fn test_sequence() {
     let expected = vec![
-        0 as u8,
-        8 as u8,
-        0 as u8,
-        2 as u8,
-        '1' as u8,
-        '0' as u8,
-        0 as u8,
-        2 as u8,
-        '1' as u8,
-        '1' as u8,
-        0 as u8,
-        0 as u8,
+        0 as u8, 8 as u8, 0 as u8, 2 as u8, '1' as u8, '0' as u8, 0 as u8, 2 as u8, '1' as u8,
+        '1' as u8, 0 as u8, 0 as u8,
     ];
 
     let value = vec![10, 11];
