@@ -337,159 +337,167 @@ impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
     }
 }
 
-#[test]
-fn test_serialize_bool_true() {
-    let expected = vec![
-        0 as u8, 4 as u8, 'T' as u8, 'r' as u8, 'u' as u8, 'e' as u8, 0 as u8, 0 as u8,
-    ];
-    assert_eq!(expected, to_amp(&true).unwrap());
-}
-#[test]
-fn test_serialize_bool_false() {
-    let expected = vec![
-        0 as u8, 5 as u8, 'F' as u8, 'a' as u8, 'l' as u8, 's' as u8, 'e' as u8, 0 as u8, 0 as u8,
-    ];
-    assert_eq!(expected, to_amp(&false).unwrap());
-}
-#[test]
-fn test_serialize_char() {
-    let an_char = 'X';
-    let expected = vec![0 as u8, 1 as u8, 'X' as u8, 0 as u8, 0 as u8];
-    assert_eq!(expected, to_amp(&an_char).unwrap());
-}
-#[test]
-fn test_serialize_str() {
-    let an_str = "An string";
-    let expected = vec![
-        0 as u8, 9 as u8, 'A' as u8, 'n' as u8, ' ' as u8, 's' as u8, 't' as u8, 'r' as u8,
-        'i' as u8, 'n' as u8, 'g' as u8, 0 as u8, 0 as u8,
-    ];
-    assert_eq!(expected, to_amp(&an_str).unwrap());
-}
+#[cfg(test)]
+mod test {
+    use super::*;
 
-#[test]
-fn test_serialize_u8() {
-    let number: u8 = 10;
-    let expected = vec![0 as u8, 2 as u8, '1' as u8, '0' as u8, 0 as u8, 0 as u8];
-    assert_eq!(expected, to_amp(&number).unwrap());
-}
-#[test]
-fn test_serialize_u16() {
-    let number: u16 = 100;
-    let expected = vec![
-        0 as u8, 3 as u8, '1' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
-    ];
-    assert_eq!(expected, to_amp(&number).unwrap());
-}
-#[test]
-fn test_serialize_u32() {
-    let number: u32 = 1000;
-    let expected = vec![
-        0 as u8, 4 as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
-    ];
-    assert_eq!(expected, to_amp(&number).unwrap());
-}
-#[test]
-fn test_serialize_u64() {
-    let number: u64 = 10000;
-    let expected = vec![
-        0 as u8, 5 as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
-    ];
-    assert_eq!(expected, to_amp(&number).unwrap());
-}
-
-#[test]
-fn test_serialize_i8() {
-    let number: i8 = -10;
-    let expected = vec![
-        0 as u8, 3 as u8, '-' as u8, '1' as u8, '0' as u8, 0 as u8, 0 as u8,
-    ];
-    assert_eq!(expected, to_amp(&number).unwrap());
-}
-#[test]
-fn test_serialize_i16() {
-    let number: i16 = -100;
-    let expected = vec![
-        0 as u8, 4 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
-    ];
-    assert_eq!(expected, to_amp(&number).unwrap());
-}
-#[test]
-fn test_serialize_i32() {
-    let number: i32 = -1000;
-    let expected = vec![
-        0 as u8, 5 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
-    ];
-    assert_eq!(expected, to_amp(&number).unwrap());
-}
-#[test]
-fn test_serialize_i64() {
-    let number: i64 = -10000;
-    let expected = vec![
-        0 as u8, 6 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, '0' as u8,
-        0 as u8, 0 as u8,
-    ];
-    assert_eq!(expected, to_amp(&number).unwrap());
-}
-
-#[test]
-fn test_serialize_f32() {
-    let number: f32 = 1.5;
-    let expected = vec![
-        0 as u8, 3 as u8, '1' as u8, '.' as u8, '5' as u8, 0 as u8, 0 as u8,
-    ];
-    assert_eq!(expected, to_amp(&number).unwrap());
-}
-#[test]
-fn test_serialize_f64() {
-    let number: f64 = 10.5;
-    let expected = vec![
-        0 as u8, 4 as u8, '1' as u8, '0' as u8, '.' as u8, '5' as u8, 0 as u8, 0 as u8,
-    ];
-    assert_eq!(expected, to_amp(&number).unwrap());
-}
-
-#[test]
-fn test_some() {
-    let expected: Vec<u8> = vec![0 as u8, 1 as u8, '1' as u8, 0 as u8, 0 as u8];
-    let value: Option<u8> = Some(1);
-    assert_eq!(expected, to_amp(&value).unwrap());
-}
-
-#[test]
-fn test_struct() {
-    let expected = vec![
-        0 as u8, 5 as u8, 'v' as u8, 'a' as u8, 'l' as u8, 'u' as u8, 'e' as u8, 0 as u8, 2 as u8,
-        '1' as u8, '0' as u8, 0 as u8, 6 as u8, 'n' as u8, 'e' as u8, 's' as u8, 't' as u8,
-        'e' as u8, 'd' as u8, 0 as u8, 5 as u8, 'i' as u8, 'n' as u8, 'n' as u8, 'e' as u8,
-        'r' as u8, 0 as u8, 1 as u8, '1' as u8, 0 as u8, 0 as u8,
-    ];
-
-    #[derive(Serialize)]
-    struct NestedStruct {
-        inner: usize,
+    #[test]
+    fn test_serialize_bool_true() {
+        let expected = vec![
+            0 as u8, 4 as u8, 'T' as u8, 'r' as u8, 'u' as u8, 'e' as u8, 0 as u8, 0 as u8,
+        ];
+        assert_eq!(expected, to_amp(&true).unwrap());
+    }
+    #[test]
+    fn test_serialize_bool_false() {
+        let expected = vec![
+            0 as u8, 5 as u8, 'F' as u8, 'a' as u8, 'l' as u8, 's' as u8, 'e' as u8, 0 as u8,
+            0 as u8,
+        ];
+        assert_eq!(expected, to_amp(&false).unwrap());
+    }
+    #[test]
+    fn test_serialize_char() {
+        let an_char = 'X';
+        let expected = vec![0 as u8, 1 as u8, 'X' as u8, 0 as u8, 0 as u8];
+        assert_eq!(expected, to_amp(&an_char).unwrap());
+    }
+    #[test]
+    fn test_serialize_str() {
+        let an_str = "An string";
+        let expected = vec![
+            0 as u8, 9 as u8, 'A' as u8, 'n' as u8, ' ' as u8, 's' as u8, 't' as u8, 'r' as u8,
+            'i' as u8, 'n' as u8, 'g' as u8, 0 as u8, 0 as u8,
+        ];
+        assert_eq!(expected, to_amp(&an_str).unwrap());
     }
 
-    #[derive(Serialize)]
-    struct TestStruct {
-        value: usize,
-        nested: NestedStruct,
+    #[test]
+    fn test_serialize_u8() {
+        let number: u8 = 10;
+        let expected = vec![0 as u8, 2 as u8, '1' as u8, '0' as u8, 0 as u8, 0 as u8];
+        assert_eq!(expected, to_amp(&number).unwrap());
+    }
+    #[test]
+    fn test_serialize_u16() {
+        let number: u16 = 100;
+        let expected = vec![
+            0 as u8, 3 as u8, '1' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
+        ];
+        assert_eq!(expected, to_amp(&number).unwrap());
+    }
+    #[test]
+    fn test_serialize_u32() {
+        let number: u32 = 1000;
+        let expected = vec![
+            0 as u8, 4 as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
+        ];
+        assert_eq!(expected, to_amp(&number).unwrap());
+    }
+    #[test]
+    fn test_serialize_u64() {
+        let number: u64 = 10000;
+        let expected = vec![
+            0 as u8, 5 as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8,
+            0 as u8,
+        ];
+        assert_eq!(expected, to_amp(&number).unwrap());
     }
 
-    let value = TestStruct {
-        value: 10,
-        nested: NestedStruct { inner: 1 },
-    };
-    assert_eq!(expected, to_amp(&value).unwrap());
-}
+    #[test]
+    fn test_serialize_i8() {
+        let number: i8 = -10;
+        let expected = vec![
+            0 as u8, 3 as u8, '-' as u8, '1' as u8, '0' as u8, 0 as u8, 0 as u8,
+        ];
+        assert_eq!(expected, to_amp(&number).unwrap());
+    }
+    #[test]
+    fn test_serialize_i16() {
+        let number: i16 = -100;
+        let expected = vec![
+            0 as u8, 4 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
+        ];
+        assert_eq!(expected, to_amp(&number).unwrap());
+    }
+    #[test]
+    fn test_serialize_i32() {
+        let number: i32 = -1000;
+        let expected = vec![
+            0 as u8, 5 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8,
+            0 as u8,
+        ];
+        assert_eq!(expected, to_amp(&number).unwrap());
+    }
+    #[test]
+    fn test_serialize_i64() {
+        let number: i64 = -10000;
+        let expected = vec![
+            0 as u8, 6 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, '0' as u8,
+            0 as u8, 0 as u8,
+        ];
+        assert_eq!(expected, to_amp(&number).unwrap());
+    }
 
-#[test]
-fn test_sequence() {
-    let expected = vec![
-        0 as u8, 8 as u8, 0 as u8, 2 as u8, '1' as u8, '0' as u8, 0 as u8, 2 as u8, '1' as u8,
-        '1' as u8, 0 as u8, 0 as u8,
-    ];
+    #[test]
+    fn test_serialize_f32() {
+        let number: f32 = 1.5;
+        let expected = vec![
+            0 as u8, 3 as u8, '1' as u8, '.' as u8, '5' as u8, 0 as u8, 0 as u8,
+        ];
+        assert_eq!(expected, to_amp(&number).unwrap());
+    }
+    #[test]
+    fn test_serialize_f64() {
+        let number: f64 = 10.5;
+        let expected = vec![
+            0 as u8, 4 as u8, '1' as u8, '0' as u8, '.' as u8, '5' as u8, 0 as u8, 0 as u8,
+        ];
+        assert_eq!(expected, to_amp(&number).unwrap());
+    }
 
-    let value = vec![10, 11];
-    assert_eq!(expected, to_amp(&value).unwrap());
+    #[test]
+    fn test_some() {
+        let expected: Vec<u8> = vec![0 as u8, 1 as u8, '1' as u8, 0 as u8, 0 as u8];
+        let value: Option<u8> = Some(1);
+        assert_eq!(expected, to_amp(&value).unwrap());
+    }
+
+    #[test]
+    fn test_struct() {
+        let expected = vec![
+            0 as u8, 5 as u8, 'v' as u8, 'a' as u8, 'l' as u8, 'u' as u8, 'e' as u8, 0 as u8,
+            2 as u8, '1' as u8, '0' as u8, 0 as u8, 6 as u8, 'n' as u8, 'e' as u8, 's' as u8,
+            't' as u8, 'e' as u8, 'd' as u8, 0 as u8, 5 as u8, 'i' as u8, 'n' as u8, 'n' as u8,
+            'e' as u8, 'r' as u8, 0 as u8, 1 as u8, '1' as u8, 0 as u8, 0 as u8,
+        ];
+
+        #[derive(Serialize)]
+        struct NestedStruct {
+            inner: usize,
+        }
+
+        #[derive(Serialize)]
+        struct TestStruct {
+            value: usize,
+            nested: NestedStruct,
+        }
+
+        let value = TestStruct {
+            value: 10,
+            nested: NestedStruct { inner: 1 },
+        };
+        assert_eq!(expected, to_amp(&value).unwrap());
+    }
+
+    #[test]
+    fn test_sequence() {
+        let expected = vec![
+            0 as u8, 8 as u8, 0 as u8, 2 as u8, '1' as u8, '0' as u8, 0 as u8, 2 as u8, '1' as u8,
+            '1' as u8, 0 as u8, 0 as u8,
+        ];
+
+        let value = vec![10, 11];
+        assert_eq!(expected, to_amp(&value).unwrap());
+    }
 }
