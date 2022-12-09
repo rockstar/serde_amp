@@ -29,7 +29,7 @@ impl Serializer {
     // to have a `end`-type call for termination. This must be called
     // explicitly.
     fn end(&mut self) {
-        self.output.extend(vec![0 as u8, 0 as u8]);
+        self.output.extend(vec![0_u8, 0_u8]);
     }
 }
 
@@ -60,9 +60,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
 
     fn serialize_bool(self, v: bool) -> Result<()> {
         if v {
-            self.serialize_str(&"True")
+            self.serialize_str("True")
         } else {
-            self.serialize_str(&"False")
+            self.serialize_str("False")
         }
     }
     fn serialize_char(self, v: char) -> Result<()> {

@@ -52,7 +52,7 @@ impl<'de> Deserializer<'de> {
         match str::from_utf8(&self.input[self.index..new_value]) {
             Ok(string) => {
                 self.index = new_value;
-                Ok(&string)
+                Ok(string)
             }
             Err(_) => Err(Error::BadData),
         }
@@ -80,7 +80,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_i8(1 as i8)
+        visitor.visit_i8(1_i8)
     }
 
     fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value>
@@ -287,7 +287,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     }
 
     fn deserialize_struct<V>(
-        mut self,
+        self,
         _name: &'static str,
         _fields: &'static [&'static str],
         visitor: V,
@@ -296,7 +296,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         V: Visitor<'de>,
     {
         //self.deserialize_map(visitor)
-        let value = visitor.visit_map(AmpAccess::new(&mut self)).unwrap();
+        let value = visitor.visit_map(AmpAccess::new(self)).unwrap();
         Ok(value)
     }
 
@@ -333,7 +333,7 @@ struct AmpAccess<'a, 'de: 'a> {
 
 impl<'a, 'de> AmpAccess<'a, 'de> {
     fn new(de: &'a mut Deserializer<'de>) -> Self {
-        AmpAccess { de: de }
+        AmpAccess { de }
     }
 }
 

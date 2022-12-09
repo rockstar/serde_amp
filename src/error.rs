@@ -5,7 +5,7 @@ use serde::{de, ser};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
     Message(String),
     Eof,
@@ -27,7 +27,14 @@ impl de::Error for Error {
 
 impl Display for Error {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str(&self.to_string())
+        match self {
+            Error::Message(message) => formatter.write_str(&format!("Error: {}", message)),
+            Error::BadData => formatter.write_str("Error: Bad data"),
+            Error::Eof => formatter.write_str("Error: Unexpected EOF"),
+            Error::TrailingCharacters => {
+                formatter.write_str("Error: Unexpected trailing characters")
+            }
+        }
     }
 }
 
