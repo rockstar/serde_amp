@@ -6,7 +6,7 @@ use serde::{ser, Serialize};
 use crate::error::{Error, Result};
 
 fn usize_to_bytes(integer: usize) -> [u8; 2] {
-    if integer > std::u16::MAX as usize {
+    if integer > u16::MAX as usize {
         panic!("Key length in response too long");
     }
 
@@ -49,7 +49,7 @@ where
     Ok(serializer.output)
 }
 
-impl<'a> ser::Serializer for &'a mut Serializer {
+impl ser::Serializer for &mut Serializer {
     type Ok = ();
     type Error = Error;
 
@@ -209,7 +209,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 }
 
-impl<'a> ser::SerializeSeq for &'a mut Serializer {
+impl ser::SerializeSeq for &mut Serializer {
     type Ok = ();
     type Error = Error;
 
@@ -233,7 +233,7 @@ impl<'a> ser::SerializeSeq for &'a mut Serializer {
     }
 }
 
-impl<'a> ser::SerializeTuple for &'a mut Serializer {
+impl ser::SerializeTuple for &mut Serializer {
     type Ok = ();
     type Error = Error;
 
@@ -249,7 +249,7 @@ impl<'a> ser::SerializeTuple for &'a mut Serializer {
     }
 }
 
-impl<'a> ser::SerializeTupleStruct for &'a mut Serializer {
+impl ser::SerializeTupleStruct for &mut Serializer {
     type Ok = ();
     type Error = Error;
 
@@ -265,7 +265,7 @@ impl<'a> ser::SerializeTupleStruct for &'a mut Serializer {
     }
 }
 
-impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
+impl ser::SerializeTupleVariant for &mut Serializer {
     type Ok = ();
     type Error = Error;
 
@@ -281,7 +281,7 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
     }
 }
 
-impl<'a> ser::SerializeMap for &'a mut Serializer {
+impl ser::SerializeMap for &mut Serializer {
     type Ok = ();
     type Error = Error;
 
@@ -304,7 +304,7 @@ impl<'a> ser::SerializeMap for &'a mut Serializer {
     }
 }
 
-impl<'a> ser::SerializeStruct for &'a mut Serializer {
+impl ser::SerializeStruct for &mut Serializer {
     type Ok = ();
     type Error = Error;
 
@@ -321,7 +321,7 @@ impl<'a> ser::SerializeStruct for &'a mut Serializer {
     }
 }
 
-impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
+impl ser::SerializeStructVariant for &mut Serializer {
     type Ok = ();
     type Error = Error;
 
@@ -343,31 +343,25 @@ mod test {
 
     #[test]
     fn test_serialize_bool_true() {
-        let expected = vec![
-            0 as u8, 4 as u8, 'T' as u8, 'r' as u8, 'u' as u8, 'e' as u8, 0 as u8, 0 as u8,
-        ];
+        let expected = vec![0_u8, 4_u8, b'T', b'r', b'u', b'e', 0_u8, 0_u8];
         assert_eq!(expected, to_amp(&true).unwrap());
     }
     #[test]
     fn test_serialize_bool_false() {
-        let expected = vec![
-            0 as u8, 5 as u8, 'F' as u8, 'a' as u8, 'l' as u8, 's' as u8, 'e' as u8, 0 as u8,
-            0 as u8,
-        ];
+        let expected = vec![0_u8, 5_u8, b'F', b'a', b'l', b's', b'e', 0_u8, 0_u8];
         assert_eq!(expected, to_amp(&false).unwrap());
     }
     #[test]
     fn test_serialize_char() {
         let an_char = 'X';
-        let expected = vec![0 as u8, 1 as u8, 'X' as u8, 0 as u8, 0 as u8];
+        let expected = vec![0_u8, 1_u8, b'X', 0_u8, 0_u8];
         assert_eq!(expected, to_amp(&an_char).unwrap());
     }
     #[test]
     fn test_serialize_str() {
         let an_str = "An string";
         let expected = vec![
-            0 as u8, 9 as u8, 'A' as u8, 'n' as u8, ' ' as u8, 's' as u8, 't' as u8, 'r' as u8,
-            'i' as u8, 'n' as u8, 'g' as u8, 0 as u8, 0 as u8,
+            0_u8, 9_u8, b'A', b'n', b' ', b's', b't', b'r', b'i', b'n', b'g', 0_u8, 0_u8,
         ];
         assert_eq!(expected, to_amp(&an_str).unwrap());
     }
@@ -375,90 +369,69 @@ mod test {
     #[test]
     fn test_serialize_u8() {
         let number: u8 = 10;
-        let expected = vec![0 as u8, 2 as u8, '1' as u8, '0' as u8, 0 as u8, 0 as u8];
+        let expected = vec![0_u8, 2_u8, b'1', b'0', 0_u8, 0_u8];
         assert_eq!(expected, to_amp(&number).unwrap());
     }
     #[test]
     fn test_serialize_u16() {
         let number: u16 = 100;
-        let expected = vec![
-            0 as u8, 3 as u8, '1' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
-        ];
+        let expected = vec![0_u8, 3_u8, b'1', b'0', b'0', 0_u8, 0_u8];
         assert_eq!(expected, to_amp(&number).unwrap());
     }
     #[test]
     fn test_serialize_u32() {
         let number: u32 = 1000;
-        let expected = vec![
-            0 as u8, 4 as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
-        ];
+        let expected = vec![0_u8, 4_u8, b'1', b'0', b'0', b'0', 0_u8, 0_u8];
         assert_eq!(expected, to_amp(&number).unwrap());
     }
     #[test]
     fn test_serialize_u64() {
         let number: u64 = 10000;
-        let expected = vec![
-            0 as u8, 5 as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8,
-            0 as u8,
-        ];
+        let expected = vec![0_u8, 5_u8, b'1', b'0', b'0', b'0', b'0', 0_u8, 0_u8];
         assert_eq!(expected, to_amp(&number).unwrap());
     }
 
     #[test]
     fn test_serialize_i8() {
         let number: i8 = -10;
-        let expected = vec![
-            0 as u8, 3 as u8, '-' as u8, '1' as u8, '0' as u8, 0 as u8, 0 as u8,
-        ];
+        let expected = vec![0_u8, 3_u8, b'-', b'1', b'0', 0_u8, 0_u8];
         assert_eq!(expected, to_amp(&number).unwrap());
     }
     #[test]
     fn test_serialize_i16() {
         let number: i16 = -100;
-        let expected = vec![
-            0 as u8, 4 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, 0 as u8, 0 as u8,
-        ];
+        let expected = vec![0_u8, 4_u8, b'-', b'1', b'0', b'0', 0_u8, 0_u8];
         assert_eq!(expected, to_amp(&number).unwrap());
     }
     #[test]
     fn test_serialize_i32() {
         let number: i32 = -1000;
-        let expected = vec![
-            0 as u8, 5 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, 0 as u8,
-            0 as u8,
-        ];
+        let expected = vec![0_u8, 5_u8, b'-', b'1', b'0', b'0', b'0', 0_u8, 0_u8];
         assert_eq!(expected, to_amp(&number).unwrap());
     }
     #[test]
     fn test_serialize_i64() {
         let number: i64 = -10000;
-        let expected = vec![
-            0 as u8, 6 as u8, '-' as u8, '1' as u8, '0' as u8, '0' as u8, '0' as u8, '0' as u8,
-            0 as u8, 0 as u8,
-        ];
+        let expected = vec![0_u8, 6_u8, b'-', b'1', b'0', b'0', b'0', b'0', 0_u8, 0_u8];
         assert_eq!(expected, to_amp(&number).unwrap());
     }
 
     #[test]
     fn test_serialize_f32() {
         let number: f32 = 1.5;
-        let expected = vec![
-            0 as u8, 3 as u8, '1' as u8, '.' as u8, '5' as u8, 0 as u8, 0 as u8,
-        ];
+        let expected = vec![0_u8, 3_u8, b'1', b'.', b'5', 0_u8, 0_u8];
         assert_eq!(expected, to_amp(&number).unwrap());
     }
     #[test]
     fn test_serialize_f64() {
         let number: f64 = 10.5;
-        let expected = vec![
-            0 as u8, 4 as u8, '1' as u8, '0' as u8, '.' as u8, '5' as u8, 0 as u8, 0 as u8,
-        ];
+        let expected = vec![0_u8, 4_u8, b'1', b'0', b'.', b'5', 0_u8, 0_u8];
         assert_eq!(expected, to_amp(&number).unwrap());
     }
 
     #[test]
     fn test_some() {
-        let expected: Vec<u8> = vec![0 as u8, 1 as u8, '1' as u8, 0 as u8, 0 as u8];
+        let expected: Vec<u8> = vec![0_u8, 1_u8, b'1', 0_u8, 0_u8];
         let value: Option<u8> = Some(1);
         assert_eq!(expected, to_amp(&value).unwrap());
     }
@@ -466,10 +439,9 @@ mod test {
     #[test]
     fn test_struct() {
         let expected = vec![
-            0 as u8, 5 as u8, 'v' as u8, 'a' as u8, 'l' as u8, 'u' as u8, 'e' as u8, 0 as u8,
-            2 as u8, '1' as u8, '0' as u8, 0 as u8, 6 as u8, 'n' as u8, 'e' as u8, 's' as u8,
-            't' as u8, 'e' as u8, 'd' as u8, 0 as u8, 5 as u8, 'i' as u8, 'n' as u8, 'n' as u8,
-            'e' as u8, 'r' as u8, 0 as u8, 1 as u8, '1' as u8, 0 as u8, 0 as u8,
+            0_u8, 5_u8, b'v', b'a', b'l', b'u', b'e', 0_u8, 2_u8, b'1', b'0', 0_u8, 6_u8, b'n',
+            b'e', b's', b't', b'e', b'd', 0_u8, 5_u8, b'i', b'n', b'n', b'e', b'r', 0_u8, 1_u8,
+            b'1', 0_u8, 0_u8,
         ];
 
         #[derive(Serialize)]
@@ -493,8 +465,7 @@ mod test {
     #[test]
     fn test_sequence() {
         let expected = vec![
-            0 as u8, 8 as u8, 0 as u8, 2 as u8, '1' as u8, '0' as u8, 0 as u8, 2 as u8, '1' as u8,
-            '1' as u8, 0 as u8, 0 as u8,
+            0_u8, 8_u8, 0_u8, 2_u8, b'1', b'0', 0_u8, 2_u8, b'1', b'1', 0_u8, 0_u8,
         ];
 
         let value = vec![10, 11];

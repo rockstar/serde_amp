@@ -1,0 +1,27 @@
+# Install the git hook once per clone with `prek install`.
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "cargo-fmt"
+name = "cargo fmt"
+language = "system"
+entry = "cargo fmt --all -- --check"
+types = ["rust"]
+pass_filenames = false
+
+[[repos.hooks]]
+id = "cargo-build"
+name = "cargo build"
+language = "system"
+entry = "cargo build --all-targets --all-features"
+types_or = ["rust", "toml"]
+pass_filenames = false
+
+[[repos.hooks]]
+id = "cargo-clippy"
+name = "cargo clippy"
+language = "system"
+entry = "cargo clippy --all-targets --all-features -- -D warnings"
+types_or = ["rust", "toml"]
+pass_filenames = false
