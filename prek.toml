@@ -27,6 +27,14 @@ entry = "cargo clippy --workspace --all-targets --all-features -- -D warnings"
 types_or = ["rust", "toml"]
 pass_filenames = false
 
+[[repos.hooks]]
+id = "cargo-test"
+name = "cargo test"
+language = "system"
+entry = "cargo test --workspace --all-features"
+types_or = ["rust", "toml", "markdown"]
+pass_filenames = false
+
 # XXX: rockstar (6 Oct 2026) - amp-protocol hasn't been released yet, so we can't
 # check against an existing version. Remove the --exclude after we've published
 # the first version.
