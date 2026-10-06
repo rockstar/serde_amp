@@ -1,150 +1,102 @@
-use std::convert::TryInto;
+use amp_protocol::AmpBox;
+use serde::ser::{self, Impossible, Serialize};
 
-use byteorder::{BigEndian, WriteBytesExt};
-use serde::{ser, Serialize};
+use crate::Error;
 
-use crate::error::{Error, Result};
-
-fn usize_to_bytes(integer: usize) -> [u8; 2] {
-    if integer > u16::MAX as usize {
-        panic!("Key length in response too long");
-    }
-
-    let mut bytearray = Vec::with_capacity(2);
-    bytearray.write_u16::<BigEndian>(integer as u16).unwrap();
-    match bytearray.try_into() {
-        Ok(value) => value,
-        Err(err) => panic!("{:?}", err),
-    }
-}
-
-struct Serializer {
-    // Due to the way that serde serializes, we must keep a "start" index
-    // for where we should insert the byte length. This is kept as a stack,
-    // as we may have multiple markers.
-    byte_indexes: Vec<usize>,
-
-    output: Vec<u8>,
-}
-
-impl Serializer {
-    // Amp requires termination with bytes 0x00 0x00. serde doesn't *seem*
-    // to have a `end`-type call for termination. This must be called
-    // explicitly.
-    fn end(&mut self) {
-        self.output.extend(vec![0_u8, 0_u8]);
-    }
-}
-
-pub fn to_amp<T>(value: &T) -> Result<Vec<u8>>
+/// Serializes `value` into a box.
+///
+/// `value` must be a struct or a map, or a newtype or `Some` wrapping one.
+/// Each field becomes one key/value pair. A field holding `None` is omitted.
+/// A field holding a sequence of scalars becomes a `ListOf`, and a sequence
+/// of structs or maps becomes an `AmpList`. The crate README lists how every
+/// Rust type maps to an AMP type.
+pub fn to_box<T>(value: &T) -> Result<AmpBox, Error>
 where
-    T: ser::Serialize,
+    T: Serialize + ?Sized,
 {
-    let mut serializer = Serializer {
-        byte_indexes: vec![],
-        output: vec![],
-    };
-    value.serialize(&mut serializer)?;
-    serializer.end();
-    Ok(serializer.output)
+    value.serialize(BoxSerializer)
 }
 
-impl ser::Serializer for &mut Serializer {
-    type Ok = ();
+/// What one field serializes to.
+enum Value {
+    /// `None`: the field is left out of the box.
+    Absent,
+    /// A scalar or a sequence, already encoded as the value's bytes.
+    Scalar(Vec<u8>),
+    /// A struct or map. Only valid as an element of a sequence (an `AmpList`).
+    Box(AmpBox),
+}
+
+/// Serializes the top-level value, which must be a struct or map.
+struct BoxSerializer;
+
+macro_rules! not_a_box {
+    ($($method:ident($ty:ty)),* $(,)?) => {
+        $(fn $method(self, _value: $ty) -> Result<AmpBox, Error> {
+            Err(Error::NotABox)
+        })*
+    };
+}
+
+impl ser::Serializer for BoxSerializer {
+    type Ok = AmpBox;
     type Error = Error;
+    type SerializeSeq = Impossible<AmpBox, Error>;
+    type SerializeTuple = Impossible<AmpBox, Error>;
+    type SerializeTupleStruct = Impossible<AmpBox, Error>;
+    type SerializeTupleVariant = Impossible<AmpBox, Error>;
+    type SerializeMap = BoxBuilder;
+    type SerializeStruct = BoxBuilder;
+    type SerializeStructVariant = Impossible<AmpBox, Error>;
 
-    type SerializeSeq = Self;
-    type SerializeTuple = Self;
-    type SerializeTupleStruct = Self;
-    type SerializeTupleVariant = Self;
-    type SerializeMap = Self;
-    type SerializeStruct = Self;
-    type SerializeStructVariant = Self;
-
-    fn serialize_bool(self, v: bool) -> Result<()> {
-        if v {
-            self.serialize_str("True")
-        } else {
-            self.serialize_str("False")
-        }
-    }
-    fn serialize_char(self, v: char) -> Result<()> {
-        self.serialize_str(&v.to_string())
-    }
-    fn serialize_str(self, v: &str) -> Result<()> {
-        let bytes = v.as_bytes();
-        self.output.extend(usize_to_bytes(bytes.len()).iter());
-        self.output.extend(v.as_bytes());
-        Ok(())
-    }
-
-    fn serialize_u8(self, v: u8) -> Result<()> {
-        self.serialize_u64(v as u64)
-    }
-    fn serialize_u16(self, v: u16) -> Result<()> {
-        self.serialize_u64(v as u64)
-    }
-    fn serialize_u32(self, v: u32) -> Result<()> {
-        self.serialize_u64(v as u64)
-    }
-    fn serialize_u64(self, v: u64) -> Result<()> {
-        self.serialize_str(&v.to_string())
+    not_a_box! {
+        serialize_bool(bool),
+        serialize_i8(i8),
+        serialize_i16(i16),
+        serialize_i32(i32),
+        serialize_i64(i64),
+        serialize_u8(u8),
+        serialize_u16(u16),
+        serialize_u32(u32),
+        serialize_u64(u64),
+        serialize_f32(f32),
+        serialize_f64(f64),
+        serialize_char(char),
+        serialize_str(&str),
+        serialize_bytes(&[u8]),
     }
 
-    fn serialize_i8(self, v: i8) -> Result<()> {
-        self.serialize_i64(v as i64)
-    }
-    fn serialize_i16(self, v: i16) -> Result<()> {
-        self.serialize_i64(v as i64)
-    }
-    fn serialize_i32(self, v: i32) -> Result<()> {
-        self.serialize_i64(v as i64)
-    }
-    fn serialize_i64(self, v: i64) -> Result<()> {
-        self.serialize_str(&v.to_string())
+    fn serialize_none(self) -> Result<AmpBox, Error> {
+        Err(Error::NotABox)
     }
 
-    fn serialize_f32(self, v: f32) -> Result<()> {
-        self.serialize_f64(v as f64)
-    }
-    fn serialize_f64(self, v: f64) -> Result<()> {
-        self.serialize_str(&v.to_string())
-    }
-
-    fn serialize_bytes(self, _v: &[u8]) -> Result<()> {
-        unimplemented!();
-    }
-
-    fn serialize_none(self) -> Result<()> {
-        self.serialize_unit()
-    }
-    fn serialize_unit(self) -> Result<()> {
-        unimplemented!();
-    }
-
-    fn serialize_some<T>(self, value: &T) -> Result<()>
+    fn serialize_some<T>(self, value: &T) -> Result<AmpBox, Error>
     where
-        T: ?Sized + ser::Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(self)
     }
 
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
-        self.serialize_unit()
+    fn serialize_unit(self) -> Result<AmpBox, Error> {
+        Err(Error::NotABox)
+    }
+
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<AmpBox, Error> {
+        Err(Error::NotABox)
     }
 
     fn serialize_unit_variant(
         self,
         _name: &'static str,
-        _variant_index: u32,
-        variant: &'static str,
-    ) -> Result<()> {
-        self.serialize_str(variant)
+        _index: u32,
+        _variant: &'static str,
+    ) -> Result<AmpBox, Error> {
+        Err(Error::NotABox)
     }
 
-    fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<()>
+    fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<AmpBox, Error>
     where
-        T: ?Sized + ser::Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(self)
     }
@@ -152,323 +104,716 @@ impl ser::Serializer for &mut Serializer {
     fn serialize_newtype_variant<T>(
         self,
         _name: &'static str,
-        _variant_index: u32,
+        _index: u32,
         _variant: &'static str,
         _value: &T,
-    ) -> Result<()>
+    ) -> Result<AmpBox, Error>
     where
-        T: ?Sized + ser::Serialize,
+        T: Serialize + ?Sized,
     {
-        unimplemented!();
+        Err(Error::NotABox)
     }
 
-    fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple> {
-        self.serialize_seq(Some(len))
+    fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Error> {
+        Err(Error::NotABox)
     }
+
+    fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple, Error> {
+        Err(Error::NotABox)
+    }
+
     fn serialize_tuple_struct(
         self,
         _name: &'static str,
-        len: usize,
-    ) -> Result<Self::SerializeTupleStruct> {
-        self.serialize_seq(Some(len))
-    }
-    fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq> {
-        self.byte_indexes.push(self.output.len());
-        Ok(self)
+        _len: usize,
+    ) -> Result<Self::SerializeTupleStruct, Error> {
+        Err(Error::NotABox)
     }
 
     fn serialize_tuple_variant(
         self,
         _name: &'static str,
-        _variant_index: u32,
+        _index: u32,
         _variant: &'static str,
         _len: usize,
-    ) -> Result<Self::SerializeTupleVariant> {
-        unimplemented!();
+    ) -> Result<Self::SerializeTupleVariant, Error> {
+        Err(Error::NotABox)
     }
 
-    fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self::SerializeStruct> {
-        self.serialize_map(Some(len))
+    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, Error> {
+        Ok(BoxBuilder::default())
     }
-    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        Ok(self)
+
+    fn serialize_struct(
+        self,
+        _name: &'static str,
+        _len: usize,
+    ) -> Result<Self::SerializeStruct, Error> {
+        Ok(BoxBuilder::default())
     }
 
     fn serialize_struct_variant(
         self,
         _name: &'static str,
-        _variant_index: u32,
+        _index: u32,
         _variant: &'static str,
         _len: usize,
-    ) -> Result<Self::SerializeStructVariant> {
-        unimplemented!();
+    ) -> Result<Self::SerializeStructVariant, Error> {
+        Err(Error::NotABox)
     }
 
     fn is_human_readable(&self) -> bool {
-        false
+        true
     }
 }
 
-impl ser::SerializeSeq for &mut Serializer {
-    type Ok = ();
-    type Error = Error;
+/// Collects the fields of a struct or the entries of a map into a box.
+#[derive(Default)]
+struct BoxBuilder {
+    amp_box: AmpBox,
+    /// A map key waiting for its value.
+    key: Option<Vec<u8>>,
+}
 
-    fn serialize_element<T>(&mut self, value: &T) -> Result<()>
-    where
-        T: ?Sized + ser::Serialize,
-    {
-        value.serialize(&mut **self)
-    }
-
-    fn end(self) -> Result<()> {
-        let index = self.byte_indexes.pop().unwrap();
-
-        let count = self.output.len() - index;
-        let bytes = usize_to_bytes(count);
-
-        self.output.insert(index, bytes[0]);
-        self.output.insert(index + 1, bytes[1]);
-
-        Ok(())
+impl BoxBuilder {
+    fn field(&mut self, key: Vec<u8>, value: Value) -> Result<(), Error> {
+        match value {
+            Value::Absent => Ok(()),
+            Value::Scalar(bytes) => {
+                self.amp_box.insert(key, bytes).map_err(Error::Protocol)?;
+                Ok(())
+            }
+            Value::Box(_) => Err(Error::Unsupported("a nested struct or map")),
+        }
     }
 }
 
-impl ser::SerializeTuple for &mut Serializer {
-    type Ok = ();
+impl ser::SerializeStruct for BoxBuilder {
+    type Ok = AmpBox;
     type Error = Error;
 
-    fn serialize_element<T>(&mut self, _value: &T) -> Result<()>
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Error>
     where
-        T: ?Sized + ser::Serialize,
+        T: Serialize + ?Sized,
     {
-        unimplemented!();
+        let value = value.serialize(ValueSerializer)?;
+        self.field(key.into(), value)
     }
 
-    fn end(self) -> Result<()> {
-        unimplemented!();
+    fn end(self) -> Result<AmpBox, Error> {
+        Ok(self.amp_box)
     }
 }
 
-impl ser::SerializeTupleStruct for &mut Serializer {
-    type Ok = ();
+impl ser::SerializeMap for BoxBuilder {
+    type Ok = AmpBox;
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, _value: &T) -> Result<()>
+    fn serialize_key<T>(&mut self, key: &T) -> Result<(), Error>
     where
-        T: ?Sized + ser::Serialize,
+        T: Serialize + ?Sized,
     {
-        unimplemented!();
+        match key.serialize(ValueSerializer)? {
+            Value::Scalar(bytes) => {
+                self.key = Some(bytes);
+                Ok(())
+            }
+            Value::Absent | Value::Box(_) => Err(Error::Unsupported(
+                "a map key that is not a string, number, or bytes",
+            )),
+        }
     }
 
-    fn end(self) -> Result<()> {
-        unimplemented!();
+    fn serialize_value<T>(&mut self, value: &T) -> Result<(), Error>
+    where
+        T: Serialize + ?Sized,
+    {
+        let key = self
+            .key
+            .take()
+            .ok_or_else(|| ser::Error::custom("map value serialized before its key"))?;
+        let value = value.serialize(ValueSerializer)?;
+        self.field(key, value)
+    }
+
+    fn end(self) -> Result<AmpBox, Error> {
+        Ok(self.amp_box)
     }
 }
 
-impl ser::SerializeTupleVariant for &mut Serializer {
-    type Ok = ();
-    type Error = Error;
+/// Serializes one field's value.
+struct ValueSerializer;
 
-    fn serialize_field<T>(&mut self, _value: &T) -> Result<()>
-    where
-        T: ?Sized + ser::Serialize,
-    {
-        unimplemented!();
+macro_rules! scalar_as_text {
+    ($($method:ident($ty:ty)),* $(,)?) => {
+        $(fn $method(self, value: $ty) -> Result<Value, Error> {
+            Ok(Value::Scalar(value.to_string().into_bytes()))
+        })*
+    };
+}
+
+impl ser::Serializer for ValueSerializer {
+    type Ok = Value;
+    type Error = Error;
+    type SerializeSeq = SeqBuilder;
+    type SerializeTuple = SeqBuilder;
+    type SerializeTupleStruct = SeqBuilder;
+    type SerializeTupleVariant = Impossible<Value, Error>;
+    type SerializeMap = NestedBoxBuilder;
+    type SerializeStruct = NestedBoxBuilder;
+    type SerializeStructVariant = Impossible<Value, Error>;
+
+    scalar_as_text! {
+        serialize_i8(i8),
+        serialize_i16(i16),
+        serialize_i32(i32),
+        serialize_i64(i64),
+        serialize_i128(i128),
+        serialize_u8(u8),
+        serialize_u16(u16),
+        serialize_u32(u32),
+        serialize_u64(u64),
+        serialize_u128(u128),
+        serialize_f32(f32),
+        serialize_f64(f64),
+        serialize_char(char),
     }
 
-    fn end(self) -> Result<()> {
-        unimplemented!();
+    fn serialize_bool(self, value: bool) -> Result<Value, Error> {
+        let text: &[u8] = if value { b"True" } else { b"False" };
+        Ok(Value::Scalar(text.to_vec()))
+    }
+
+    fn serialize_str(self, value: &str) -> Result<Value, Error> {
+        Ok(Value::Scalar(value.as_bytes().to_vec()))
+    }
+
+    fn serialize_bytes(self, value: &[u8]) -> Result<Value, Error> {
+        Ok(Value::Scalar(value.to_vec()))
+    }
+
+    fn serialize_none(self) -> Result<Value, Error> {
+        Ok(Value::Absent)
+    }
+
+    fn serialize_some<T>(self, value: &T) -> Result<Value, Error>
+    where
+        T: Serialize + ?Sized,
+    {
+        value.serialize(self)
+    }
+
+    fn serialize_unit(self) -> Result<Value, Error> {
+        Err(Error::Unsupported("a unit value"))
+    }
+
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<Value, Error> {
+        Err(Error::Unsupported("a unit struct"))
+    }
+
+    fn serialize_unit_variant(
+        self,
+        _name: &'static str,
+        _index: u32,
+        variant: &'static str,
+    ) -> Result<Value, Error> {
+        self.serialize_str(variant)
+    }
+
+    fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<Value, Error>
+    where
+        T: Serialize + ?Sized,
+    {
+        value.serialize(self)
+    }
+
+    fn serialize_newtype_variant<T>(
+        self,
+        _name: &'static str,
+        _index: u32,
+        _variant: &'static str,
+        _value: &T,
+    ) -> Result<Value, Error>
+    where
+        T: Serialize + ?Sized,
+    {
+        Err(Error::Unsupported("an enum variant carrying data"))
+    }
+
+    fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Error> {
+        Ok(SeqBuilder::default())
+    }
+
+    fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple, Error> {
+        Ok(SeqBuilder::default())
+    }
+
+    fn serialize_tuple_struct(
+        self,
+        _name: &'static str,
+        _len: usize,
+    ) -> Result<Self::SerializeTupleStruct, Error> {
+        Ok(SeqBuilder::default())
+    }
+
+    fn serialize_tuple_variant(
+        self,
+        _name: &'static str,
+        _index: u32,
+        _variant: &'static str,
+        _len: usize,
+    ) -> Result<Self::SerializeTupleVariant, Error> {
+        Err(Error::Unsupported("an enum variant carrying data"))
+    }
+
+    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, Error> {
+        Ok(NestedBoxBuilder::default())
+    }
+
+    fn serialize_struct(
+        self,
+        _name: &'static str,
+        _len: usize,
+    ) -> Result<Self::SerializeStruct, Error> {
+        Ok(NestedBoxBuilder::default())
+    }
+
+    fn serialize_struct_variant(
+        self,
+        _name: &'static str,
+        _index: u32,
+        _variant: &'static str,
+        _len: usize,
+    ) -> Result<Self::SerializeStructVariant, Error> {
+        Err(Error::Unsupported("an enum variant carrying data"))
+    }
+
+    fn is_human_readable(&self) -> bool {
+        true
     }
 }
 
-impl ser::SerializeMap for &mut Serializer {
-    type Ok = ();
-    type Error = Error;
+/// Which compound type a sequence is being encoded as.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SeqKind {
+    /// Scalars, each with a two-byte length prefix.
+    ListOf,
+    /// Boxes, each with its own terminator.
+    AmpList,
+}
 
-    fn serialize_key<T>(&mut self, _key: &T) -> Result<()>
-    where
-        T: ?Sized + ser::Serialize,
-    {
-        unimplemented!();
+/// Encodes the elements of a sequence into one value.
+#[derive(Default)]
+struct SeqBuilder {
+    out: Vec<u8>,
+    kind: Option<SeqKind>,
+}
+
+impl SeqBuilder {
+    fn element(&mut self, value: Value) -> Result<(), Error> {
+        match value {
+            Value::Absent => Err(Error::Unsupported("`None` inside a sequence")),
+            Value::Scalar(bytes) => {
+                self.set_kind(SeqKind::ListOf)?;
+                let len = u16::try_from(bytes.len()).map_err(|_| {
+                    Error::Unsupported("a sequence element longer than 65,535 bytes")
+                })?;
+                self.out.extend_from_slice(&len.to_be_bytes());
+                self.out.extend_from_slice(&bytes);
+                Ok(())
+            }
+            Value::Box(amp_box) => {
+                self.set_kind(SeqKind::AmpList)?;
+                self.out.extend_from_slice(&amp_box.encode());
+                Ok(())
+            }
+        }
     }
 
-    fn serialize_value<T>(&mut self, _value: &T) -> Result<()>
-    where
-        T: ?Sized + ser::Serialize,
-    {
-        unimplemented!();
-    }
-
-    fn end(self) -> Result<()> {
-        unimplemented!();
+    fn set_kind(&mut self, kind: SeqKind) -> Result<(), Error> {
+        match self.kind {
+            None => {
+                self.kind = Some(kind);
+                Ok(())
+            }
+            Some(existing) if existing == kind => Ok(()),
+            Some(_) => Err(Error::Unsupported(
+                "a sequence mixing scalars with structs or maps",
+            )),
+        }
     }
 }
 
-impl ser::SerializeStruct for &mut Serializer {
-    type Ok = ();
+impl ser::SerializeSeq for SeqBuilder {
+    type Ok = Value;
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
+    fn serialize_element<T>(&mut self, value: &T) -> Result<(), Error>
     where
-        T: ?Sized + ser::Serialize,
+        T: Serialize + ?Sized,
     {
-        key.serialize(&mut **self)?;
-        value.serialize(&mut **self)
+        self.element(value.serialize(ValueSerializer)?)
     }
 
-    fn end(self) -> Result<()> {
-        Ok(())
+    fn end(self) -> Result<Value, Error> {
+        Ok(Value::Scalar(self.out))
     }
 }
 
-impl ser::SerializeStructVariant for &mut Serializer {
-    type Ok = ();
+impl ser::SerializeTuple for SeqBuilder {
+    type Ok = Value;
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, _key: &'static str, _value: &T) -> Result<()>
+    fn serialize_element<T>(&mut self, value: &T) -> Result<(), Error>
     where
-        T: ?Sized + ser::Serialize,
+        T: Serialize + ?Sized,
     {
-        unimplemented!();
+        self.element(value.serialize(ValueSerializer)?)
     }
 
-    fn end(self) -> Result<()> {
-        unimplemented!();
+    fn end(self) -> Result<Value, Error> {
+        Ok(Value::Scalar(self.out))
+    }
+}
+
+impl ser::SerializeTupleStruct for SeqBuilder {
+    type Ok = Value;
+    type Error = Error;
+
+    fn serialize_field<T>(&mut self, value: &T) -> Result<(), Error>
+    where
+        T: Serialize + ?Sized,
+    {
+        self.element(value.serialize(ValueSerializer)?)
+    }
+
+    fn end(self) -> Result<Value, Error> {
+        Ok(Value::Scalar(self.out))
+    }
+}
+
+/// A struct or map appearing as a value, which is only valid inside a
+/// sequence. The builder produces a box; the caller decides whether that is
+/// allowed where it appeared.
+#[derive(Default)]
+struct NestedBoxBuilder(BoxBuilder);
+
+impl ser::SerializeStruct for NestedBoxBuilder {
+    type Ok = Value;
+    type Error = Error;
+
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Error>
+    where
+        T: Serialize + ?Sized,
+    {
+        ser::SerializeStruct::serialize_field(&mut self.0, key, value)
+    }
+
+    fn end(self) -> Result<Value, Error> {
+        Ok(Value::Box(self.0.amp_box))
+    }
+}
+
+impl ser::SerializeMap for NestedBoxBuilder {
+    type Ok = Value;
+    type Error = Error;
+
+    fn serialize_key<T>(&mut self, key: &T) -> Result<(), Error>
+    where
+        T: Serialize + ?Sized,
+    {
+        ser::SerializeMap::serialize_key(&mut self.0, key)
+    }
+
+    fn serialize_value<T>(&mut self, value: &T) -> Result<(), Error>
+    where
+        T: Serialize + ?Sized,
+    {
+        ser::SerializeMap::serialize_value(&mut self.0, value)
+    }
+
+    fn end(self) -> Result<Value, Error> {
+        Ok(Value::Box(self.0.amp_box))
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::collections::BTreeMap;
+
+    use serde::Serialize;
+
     use super::*;
 
-    #[test]
-    fn test_serialize_bool_true() {
-        let expected = vec![0_u8, 4_u8, b'T', b'r', b'u', b'e', 0_u8, 0_u8];
-        assert_eq!(expected, to_amp(&true).unwrap());
+    /// A struct with one field, so a scalar can be checked through the only
+    /// public entry point.
+    #[derive(Serialize)]
+    struct One<T> {
+        v: T,
     }
-    #[test]
-    fn test_serialize_bool_false() {
-        let expected = vec![0_u8, 5_u8, b'F', b'a', b'l', b's', b'e', 0_u8, 0_u8];
-        assert_eq!(expected, to_amp(&false).unwrap());
-    }
-    #[test]
-    fn test_serialize_char() {
-        let an_char = 'X';
-        let expected = vec![0_u8, 1_u8, b'X', 0_u8, 0_u8];
-        assert_eq!(expected, to_amp(&an_char).unwrap());
-    }
-    #[test]
-    fn test_serialize_str() {
-        let an_str = "An string";
-        let expected = vec![
-            0_u8, 9_u8, b'A', b'n', b' ', b's', b't', b'r', b'i', b'n', b'g', 0_u8, 0_u8,
-        ];
-        assert_eq!(expected, to_amp(&an_str).unwrap());
+
+    fn value<T: Serialize>(v: T) -> Vec<u8> {
+        let amp_box = to_box(&One { v }).unwrap();
+        assert_eq!(amp_box.len(), 1);
+        amp_box.get("v").unwrap().to_vec()
     }
 
     #[test]
-    fn test_serialize_u8() {
-        let number: u8 = 10;
-        let expected = vec![0_u8, 2_u8, b'1', b'0', 0_u8, 0_u8];
-        assert_eq!(expected, to_amp(&number).unwrap());
-    }
-    #[test]
-    fn test_serialize_u16() {
-        let number: u16 = 100;
-        let expected = vec![0_u8, 3_u8, b'1', b'0', b'0', 0_u8, 0_u8];
-        assert_eq!(expected, to_amp(&number).unwrap());
-    }
-    #[test]
-    fn test_serialize_u32() {
-        let number: u32 = 1000;
-        let expected = vec![0_u8, 4_u8, b'1', b'0', b'0', b'0', 0_u8, 0_u8];
-        assert_eq!(expected, to_amp(&number).unwrap());
-    }
-    #[test]
-    fn test_serialize_u64() {
-        let number: u64 = 10000;
-        let expected = vec![0_u8, 5_u8, b'1', b'0', b'0', b'0', b'0', 0_u8, 0_u8];
-        assert_eq!(expected, to_amp(&number).unwrap());
+    fn integers_are_decimal_text() {
+        assert_eq!(value(10_u8), b"10");
+        assert_eq!(value(-20_i8), b"-20");
+        assert_eq!(value(u64::MAX), u64::MAX.to_string().as_bytes());
+        assert_eq!(value(i128::MIN), i128::MIN.to_string().as_bytes());
     }
 
     #[test]
-    fn test_serialize_i8() {
-        let number: i8 = -10;
-        let expected = vec![0_u8, 3_u8, b'-', b'1', b'0', 0_u8, 0_u8];
-        assert_eq!(expected, to_amp(&number).unwrap());
-    }
-    #[test]
-    fn test_serialize_i16() {
-        let number: i16 = -100;
-        let expected = vec![0_u8, 4_u8, b'-', b'1', b'0', b'0', 0_u8, 0_u8];
-        assert_eq!(expected, to_amp(&number).unwrap());
-    }
-    #[test]
-    fn test_serialize_i32() {
-        let number: i32 = -1000;
-        let expected = vec![0_u8, 5_u8, b'-', b'1', b'0', b'0', b'0', 0_u8, 0_u8];
-        assert_eq!(expected, to_amp(&number).unwrap());
-    }
-    #[test]
-    fn test_serialize_i64() {
-        let number: i64 = -10000;
-        let expected = vec![0_u8, 6_u8, b'-', b'1', b'0', b'0', b'0', b'0', 0_u8, 0_u8];
-        assert_eq!(expected, to_amp(&number).unwrap());
+    fn floats_are_text_python_accepts() {
+        assert_eq!(value(1.5_f32), b"1.5");
+        assert_eq!(value(10.0_f64), b"10");
+        assert_eq!(value(f64::INFINITY), b"inf");
+        assert_eq!(value(f64::NEG_INFINITY), b"-inf");
+        assert_eq!(value(f64::NAN), b"NaN");
     }
 
     #[test]
-    fn test_serialize_f32() {
-        let number: f32 = 1.5;
-        let expected = vec![0_u8, 3_u8, b'1', b'.', b'5', 0_u8, 0_u8];
-        assert_eq!(expected, to_amp(&number).unwrap());
-    }
-    #[test]
-    fn test_serialize_f64() {
-        let number: f64 = 10.5;
-        let expected = vec![0_u8, 4_u8, b'1', b'0', b'.', b'5', 0_u8, 0_u8];
-        assert_eq!(expected, to_amp(&number).unwrap());
+    fn booleans_are_python_spelling() {
+        assert_eq!(value(true), b"True");
+        assert_eq!(value(false), b"False");
     }
 
     #[test]
-    fn test_some() {
-        let expected: Vec<u8> = vec![0_u8, 1_u8, b'1', 0_u8, 0_u8];
-        let value: Option<u8> = Some(1);
-        assert_eq!(expected, to_amp(&value).unwrap());
+    fn text_is_utf8() {
+        assert_eq!(value("h\u{e9}llo"), "h\u{e9}llo".as_bytes());
+        assert_eq!(value('X'), b"X");
+        assert_eq!(value(String::from("s")), b"s");
     }
 
     #[test]
-    fn test_struct() {
-        let expected = vec![
-            0_u8, 5_u8, b'v', b'a', b'l', b'u', b'e', 0_u8, 2_u8, b'1', b'0', 0_u8, 6_u8, b'n',
-            b'e', b's', b't', b'e', b'd', 0_u8, 5_u8, b'i', b'n', b'n', b'e', b'r', 0_u8, 1_u8,
-            b'1', 0_u8, 0_u8,
-        ];
+    fn bytes_are_raw() {
+        struct Raw(&'static [u8]);
+        impl Serialize for Raw {
+            fn serialize<S: ser::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+                s.serialize_bytes(self.0)
+            }
+        }
+        assert_eq!(value(Raw(b"\x00\xff")), b"\x00\xff");
+    }
+
+    #[test]
+    fn none_omits_the_key_and_some_is_transparent() {
+        #[derive(Serialize)]
+        struct S {
+            a: Option<u8>,
+            b: Option<u8>,
+        }
+        let amp_box = to_box(&S {
+            a: None,
+            b: Some(2),
+        })
+        .unwrap();
+        assert_eq!(amp_box.get("a"), None);
+        assert_eq!(amp_box.get("b"), Some(&b"2"[..]));
+        assert_eq!(amp_box.len(), 1);
+    }
+
+    #[test]
+    fn unit_variants_are_their_name() {
+        #[derive(Serialize)]
+        enum Mode {
+            Fast,
+            #[serde(rename = "slow")]
+            Slow,
+        }
+        assert_eq!(value(Mode::Fast), b"Fast");
+        assert_eq!(value(Mode::Slow), b"slow");
+    }
+
+    #[test]
+    fn newtype_structs_are_transparent() {
+        #[derive(Serialize)]
+        struct Id(u32);
+        assert_eq!(value(Id(7)), b"7");
 
         #[derive(Serialize)]
-        struct NestedStruct {
-            inner: usize,
+        struct Inner {
+            v: u8,
         }
-
         #[derive(Serialize)]
-        struct TestStruct {
-            value: usize,
-            nested: NestedStruct,
-        }
-
-        let value = TestStruct {
-            value: 10,
-            nested: NestedStruct { inner: 1 },
-        };
-        assert_eq!(expected, to_amp(&value).unwrap());
+        struct Wrapper(Inner);
+        let amp_box = to_box(&Wrapper(Inner { v: 1 })).unwrap();
+        assert_eq!(amp_box.get("v"), Some(&b"1"[..]));
     }
 
     #[test]
-    fn test_sequence() {
-        let expected = vec![
-            0_u8, 8_u8, 0_u8, 2_u8, b'1', b'0', 0_u8, 2_u8, b'1', b'1', 0_u8, 0_u8,
-        ];
+    fn list_of_scalars_matches_twisted() {
+        // Twisted: ListOf(Integer()) for [10, 11]
+        assert_eq!(value(vec![10, 11]), b"\x00\x0210\x00\x0211");
+        assert_eq!(value(Vec::<u8>::new()), b"");
+        assert_eq!(value([1_u8, 2]), b"\x00\x011\x00\x012");
+        assert_eq!(value((1_u8, "a")), b"\x00\x011\x00\x01a");
+        assert_eq!(value(vec!["", "x"]), b"\x00\x00\x00\x01x");
+    }
 
-        let value = vec![10, 11];
-        assert_eq!(expected, to_amp(&value).unwrap());
+    #[test]
+    fn list_of_structs_matches_twisted() {
+        // Twisted: AmpList([(b"inner", Integer())]) for [{inner: 1}, {inner: 2}]
+        #[derive(Serialize)]
+        struct Item {
+            inner: u8,
+        }
+        assert_eq!(
+            value(vec![Item { inner: 1 }, Item { inner: 2 }]),
+            b"\x00\x05inner\x00\x011\x00\x00\x00\x05inner\x00\x012\x00\x00"
+        );
+        assert_eq!(value(Vec::<Item>::new()), b"");
+    }
+
+    #[test]
+    fn nested_lists_are_lists_of_lists() {
+        assert_eq!(
+            value(vec![vec![1_u8], vec![2_u8, 3]]),
+            b"\x00\x03\x00\x011\x00\x06\x00\x012\x00\x013"
+        );
+    }
+
+    #[test]
+    fn maps_with_scalar_keys() {
+        let mut map = BTreeMap::new();
+        map.insert("b", 2_u8);
+        map.insert("a", 1_u8);
+        let amp_box = to_box(&map).unwrap();
+        assert_eq!(
+            amp_box.iter().collect::<Vec<_>>(),
+            vec![(&b"a"[..], &b"1"[..]), (&b"b"[..], &b"2"[..])]
+        );
+
+        let mut map = BTreeMap::new();
+        map.insert(1_u32, "x");
+        assert_eq!(to_box(&map).unwrap().get("1"), Some(&b"x"[..]));
+    }
+
+    #[test]
+    fn struct_fields_keep_declaration_order() {
+        #[derive(Serialize)]
+        struct S {
+            z: u8,
+            a: u8,
+        }
+        let amp_box = to_box(&S { z: 1, a: 2 }).unwrap();
+        assert_eq!(
+            amp_box.iter().map(|(k, _)| k).collect::<Vec<_>>(),
+            vec![&b"z"[..], &b"a"[..]]
+        );
+    }
+
+    #[test]
+    fn flatten_writes_any_field_type() {
+        // Serializing through `flatten` has no type problem; only reading
+        // does. See the matching deserializer test.
+        #[derive(Serialize)]
+        struct Inner {
+            n: u32,
+            flag: bool,
+        }
+        #[derive(Serialize)]
+        struct Outer {
+            a: u8,
+            #[serde(flatten)]
+            inner: Inner,
+        }
+        let amp_box = to_box(&Outer {
+            a: 1,
+            inner: Inner { n: 13, flag: true },
+        })
+        .unwrap();
+        assert_eq!(
+            amp_box.iter().collect::<Vec<_>>(),
+            vec![
+                (&b"a"[..], &b"1"[..]),
+                (&b"n"[..], &b"13"[..]),
+                (&b"flag"[..], &b"True"[..]),
+            ]
+        );
+    }
+
+    #[test]
+    fn top_level_must_be_a_struct_or_map() {
+        assert!(matches!(to_box(&1_u8), Err(Error::NotABox)));
+        assert!(matches!(to_box("s"), Err(Error::NotABox)));
+        assert!(matches!(to_box(&vec![1_u8]), Err(Error::NotABox)));
+        assert!(matches!(to_box(&()), Err(Error::NotABox)));
+        assert!(matches!(to_box(&Option::<u8>::None), Err(Error::NotABox)));
+        #[derive(Serialize)]
+        struct Unit;
+        assert!(matches!(to_box(&Unit), Err(Error::NotABox)));
+    }
+
+    #[test]
+    fn nested_struct_as_a_field_is_unsupported() {
+        #[derive(Serialize)]
+        struct Inner {
+            v: u8,
+        }
+        #[derive(Serialize)]
+        struct Outer {
+            inner: Inner,
+        }
+        assert!(matches!(
+            to_box(&Outer {
+                inner: Inner { v: 1 }
+            }),
+            Err(Error::Unsupported("a nested struct or map"))
+        ));
+    }
+
+    #[test]
+    fn unrepresentable_values_are_errors() {
+        #[derive(Serialize)]
+        enum Data {
+            Newtype(u8),
+            Tuple(u8, u8),
+            Struct { v: u8 },
+        }
+        for data in [Data::Newtype(1), Data::Tuple(1, 2), Data::Struct { v: 1 }] {
+            assert!(matches!(
+                to_box(&One { v: data }),
+                Err(Error::Unsupported("an enum variant carrying data"))
+            ));
+        }
+        assert!(matches!(
+            to_box(&One { v: () }),
+            Err(Error::Unsupported("a unit value"))
+        ));
+        assert!(matches!(
+            to_box(&One {
+                v: vec![Some(1_u8), None]
+            }),
+            Err(Error::Unsupported("`None` inside a sequence"))
+        ));
+    }
+
+    #[test]
+    fn length_limits_come_from_the_protocol() {
+        let long = "x".repeat(65_536);
+        assert!(matches!(
+            to_box(&One { v: long.as_str() }),
+            Err(Error::Protocol(amp_protocol::Error::ValueTooLong {
+                len: 65_536
+            }))
+        ));
+        let mut map = BTreeMap::new();
+        map.insert("", 1_u8);
+        assert!(matches!(
+            to_box(&map),
+            Err(Error::Protocol(amp_protocol::Error::EmptyKey))
+        ));
+        assert!(matches!(
+            to_box(&One {
+                v: vec![long.as_str()]
+            }),
+            Err(Error::Unsupported(
+                "a sequence element longer than 65,535 bytes"
+            ))
+        ));
     }
 }

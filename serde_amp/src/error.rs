@@ -1,49 +1,55 @@
-use std::fmt::{self, Display};
+use std::fmt;
 
 use serde::{de, ser};
 
-pub type Result<T> = std::result::Result<T, Error>;
-
-#[derive(Clone, Debug, Eq, PartialEq)]
+/// Everything that can go wrong converting between a Rust value and a box.
+#[derive(Debug)]
+#[non_exhaustive]
 pub enum Error {
+    /// A `Serialize` or `Deserialize` implementation reported a problem, such
+    /// as a missing or unknown field.
     Message(String),
-    Eof,
-    TrailingCharacters,
-    BadData,
+    /// A key or value broke the protocol's length limits.
+    Protocol(amp_protocol::Error),
+    /// The top-level value is not a struct or map, so it cannot be a box.
+    NotABox,
+    /// The value has no representation in AMP. The payload says which kind of
+    /// value, for example a nested struct or an enum variant carrying data.
+    Unsupported(&'static str),
+    /// A value on the wire could not be read as the requested type. The
+    /// payload says what was expected.
+    InvalidValue(&'static str),
 }
 
 impl ser::Error for Error {
-    fn custom<T: Display>(msg: T) -> Self {
+    fn custom<T: fmt::Display>(msg: T) -> Self {
         Error::Message(msg.to_string())
     }
 }
 
 impl de::Error for Error {
-    fn custom<T: Display>(msg: T) -> Self {
+    fn custom<T: fmt::Display>(msg: T) -> Self {
         Error::Message(msg.to_string())
     }
 }
 
-impl Display for Error {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Message(message) => formatter.write_str(&format!("Error: {}", message)),
-            Error::BadData => formatter.write_str("Error: Bad data"),
-            Error::Eof => formatter.write_str("Error: Unexpected EOF"),
-            Error::TrailingCharacters => {
-                formatter.write_str("Error: Unexpected trailing characters")
-            }
+            Error::Message(message) => f.write_str(message),
+            Error::Protocol(err) => write!(f, "{err}"),
+            Error::NotABox => f.write_str("a box must be a struct or map at the top level"),
+            Error::Unsupported(what) => write!(f, "{what} cannot be represented in AMP"),
+            Error::InvalidValue(expected) => write!(f, "expected {expected}"),
         }
     }
 }
 
 impl std::error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::Message(ref msg) => msg,
-            Error::Eof => "unexpected end of file",
-            Error::TrailingCharacters => "characters after the end",
-            Error::BadData => "bad or malformed data",
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Protocol(err) => Some(err),
+            _ => None,
         }
     }
 }
