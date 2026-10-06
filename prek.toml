@@ -1,4 +1,5 @@
 # Install the git hook once per clone with `prek install`.
+# Every hook runs across the whole workspace, not just the staged crate.
 [[repos]]
 repo = "local"
 
@@ -14,7 +15,7 @@ pass_filenames = false
 id = "cargo-build"
 name = "cargo build"
 language = "system"
-entry = "cargo build --all-targets --all-features"
+entry = "cargo build --workspace --all-targets --all-features"
 types_or = ["rust", "toml"]
 pass_filenames = false
 
@@ -22,7 +23,7 @@ pass_filenames = false
 id = "cargo-clippy"
 name = "cargo clippy"
 language = "system"
-entry = "cargo clippy --all-targets --all-features -- -D warnings"
+entry = "cargo clippy --workspace --all-targets --all-features -- -D warnings"
 types_or = ["rust", "toml"]
 pass_filenames = false
 
@@ -30,6 +31,6 @@ pass_filenames = false
 id = "cargo-semver-checks"
 name = "cargo semver-checks"
 language = "system"
-entry = "cargo semver-checks"
+entry = "cargo semver-checks --workspace"
 types_or = ["rust", "toml"]
 pass_filenames = false

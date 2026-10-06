@@ -1,43 +1,26 @@
 serde_amp
 ==
 
-![build-and-check](https://github.com/rockstar/serde_amp/actions/workflows/build-and-check.yml/badge.svg) ![crates.io](https://img.shields.io/crates/v/serde_amp.svg)
+![build-and-check](https://github.com/rockstar/serde_amp/actions/workflows/build-and-check.yml/badge.svg)
 
-A serialization/deserialization library for [Asynchronous Messaging Protocol](https://amp-protocol.net/)
+Rust tooling for [Asynchronous Messaging Protocol](https://amp-protocol.net/)
+(AMP), the key/value remoting protocol from Twisted.
 
-Usage
---
+This repository is a Cargo workspace. Each crate has its own README with usage
+details.
 
-```
-extern crate serde_amp;
-
-use serde_amp;
-
-#[derive(Deserialize, Serialize)]
-struct AnStruct {
-    count: usize,
-    tag: String
-}
-
-fn main() {
-    let an_struct = AnStruct { count: 83, tag: "an-tag" };
-
-    let serialized = serde_amp::to_amp(&an_struct).unwrap();
-    let deserialized = serde_amp::from_bytes(&serialized[..]).unwrap();
-}
-```
-
-**Note:** While `to_amp` can serialize standard types like `usize`, AMP itself is a
-key/value protocol, and should be used with key/value types.
+| Crate                    | Description                                              |
+|--------------------------|----------------------------------------------------------|
+| [serde_amp](serde_amp/)  | [serde](https://serde.rs) serialization and deserialization of AMP boxes |
 
 License
 --
 
-Like Serde, serde_amp is licensed under either of
+Like Serde, every crate in this workspace is licensed under either of
 
  * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
    http://www.apache.org/licenses/LICENSE-2.0)
  * MIT license ([LICENSE-MIT](LICENSE-MIT) or
    http://opensource.org/licenses/MIT)
 
-at your option.`
+at your option.

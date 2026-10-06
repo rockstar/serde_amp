@@ -1,22 +1,15 @@
-[package]
-name = "serde_amp"
-edition = "2021"
-version = "0.2.0"
-authors = ["Paul Hummer <paul@eventuallyanyway.com>"]
-license = "MIT/Apache-2.0"
-description = "Serialization/deserialization tooling for Asynchronous Messaging Protocol"
-repository = "https://github.com/rockstar/serde_amp"
-keywords = ["serde", "serialization", "amp"]
-categories = ["encoding"]
-readme = "README.md"
-include = [
-    "src/*.rs",
-    "Cargo.toml",
-    "README.md",
-    "LICENSE-MIT",
-    "LICENSE-APACHE",
-]
+[workspace]
+resolver = "2"
+members = ["serde_amp"]
 
-[dependencies]
+# Fields shared by every crate in the workspace. A crate opts in with
+# `<field>.workspace = true` in its own Cargo.toml.
+[workspace.package]
+edition = "2021"
+authors = ["Paul Hummer <paul@eventuallyanyway.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rockstar/serde_amp"
+
+[workspace.dependencies]
 byteorder = ">= 1.2.1"
 serde = { version = ">= 1.0", features = ["derive"] }
