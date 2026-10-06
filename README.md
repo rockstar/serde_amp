@@ -9,8 +9,9 @@ Rust tooling for [Asynchronous Messaging Protocol](https://amp-protocol.net/)
 This repository is a Cargo workspace. Each crate has its own README with usage
 details.
 
-| Crate                    | Description                                              |
-|--------------------------|----------------------------------------------------------|
+| Crate                         | Description                                                    |
+|-------------------------------|----------------------------------------------------------------|
+| [amp-protocol](amp-protocol/) | The wire format, box type, and request/response message types |
 | [serde_amp](serde_amp/)  | [serde](https://serde.rs) serialization and deserialization of AMP boxes |
 
 License

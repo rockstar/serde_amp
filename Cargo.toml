@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["serde_amp"]
+members = ["amp-protocol", "serde_amp"]
 
 # Fields shared by every crate in the workspace. A crate opts in with
 # `<field>.workspace = true` in its own Cargo.toml.
@@ -12,4 +12,7 @@ repository = "https://github.com/rockstar/serde_amp"
 
 [workspace.dependencies]
 byteorder = ">= 1.2.1"
+bytes = "1"
 serde = { version = ">= 1.0", features = ["derive"] }
+tokio = { version = "1", default-features = false }
+tokio-util = { version = "0.7", features = ["codec"] }

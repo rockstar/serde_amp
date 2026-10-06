@@ -1,0 +1,33 @@
+[package]
+name = "amp-protocol"
+version = "0.1.0"
+description = "Wire format and message types for Asynchronous Messaging Protocol (AMP)"
+keywords = ["amp", "protocol", "twisted", "networking"]
+categories = ["network-programming", "encoding"]
+readme = "README.md"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+include = [
+    "src/**/*.rs",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE-MIT",
+    "LICENSE-APACHE",
+]
+
+[features]
+# A tokio-util `Encoder`/`Decoder` for framing boxes on a byte stream.
+tokio = ["dep:tokio-util", "dep:bytes"]
+
+[dependencies]
+bytes = { workspace = true, optional = true }
+tokio-util = { workspace = true, optional = true }
+
+[dev-dependencies]
+# Only for the `codec` doctest, which shows `Framed` over a tokio stream.
+tokio = { workspace = true }
+
+[package.metadata.docs.rs]
+all-features = true

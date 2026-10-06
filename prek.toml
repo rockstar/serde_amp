@@ -27,10 +27,13 @@ entry = "cargo clippy --workspace --all-targets --all-features -- -D warnings"
 types_or = ["rust", "toml"]
 pass_filenames = false
 
+# XXX: rockstar (6 Oct 2026) - amp-protocol hasn't been released yet, so we can't
+# check against an existing version. Remove the --exclude after we've published
+# the first version.
 [[repos.hooks]]
 id = "cargo-semver-checks"
 name = "cargo semver-checks"
 language = "system"
-entry = "cargo semver-checks --workspace"
+entry = "cargo semver-checks --workspace --exclude amp-protocol"
 types_or = ["rust", "toml"]
 pass_filenames = false
