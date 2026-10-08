@@ -64,6 +64,7 @@ pairs. Each field holds one AMP value:
 | ListOf            | `Vec`, array, or tuple of any of the above                        |
 | AmpList           | `Vec` of structs or maps                                          |
 | optional argument | `Option<T>`; `None` omits the key, and an absent key reads `None` |
+| no results        | `()` or a unit struct, as an empty box                            |
 
 A unit enum variant is written as its name, which suits a command argument
 that takes one of a fixed set of strings. Keys that a struct does not name are
@@ -73,8 +74,8 @@ Note that a plain `Vec<u8>` is a `ListOf(Integer)`, because that is how serde
 sees it. Use `serde_bytes` or a custom `Serialize` for an AMP `String`.
 
 Not representable, and reported as an error: a struct or map as a field (AMP
-has no nesting except through `AmpList`), a unit value, an enum variant that
-carries data, and `None` inside a sequence.
+has no nesting except through `AmpList`), a unit value as a field, an enum
+variant that carries data, and `None` inside a sequence.
 
 Limitations
 --

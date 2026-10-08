@@ -7,6 +7,7 @@ use crate::Error;
 ///
 /// `value` must be a struct or a map, or a newtype or `Some` wrapping one.
 /// Each field becomes one key/value pair. A field holding `None` is omitted.
+/// `()` and a unit struct become an empty box.
 /// A field holding a sequence of scalars becomes a `ListOf`, and a sequence
 /// of structs or maps becomes an `AmpList`. The crate README lists how every
 /// Rust type maps to an AMP type.
@@ -78,11 +79,11 @@ impl ser::Serializer for BoxSerializer {
     }
 
     fn serialize_unit(self) -> Result<AmpBox, Error> {
-        Err(Error::NotABox)
+        Ok(AmpBox::new())
     }
 
     fn serialize_unit_struct(self, _name: &'static str) -> Result<AmpBox, Error> {
-        Err(Error::NotABox)
+        Ok(AmpBox::new())
     }
 
     fn serialize_unit_variant(
@@ -741,11 +742,15 @@ mod test {
         assert!(matches!(to_box(&1_u8), Err(Error::NotABox)));
         assert!(matches!(to_box("s"), Err(Error::NotABox)));
         assert!(matches!(to_box(&vec![1_u8]), Err(Error::NotABox)));
-        assert!(matches!(to_box(&()), Err(Error::NotABox)));
         assert!(matches!(to_box(&Option::<u8>::None), Err(Error::NotABox)));
+    }
+
+    #[test]
+    fn unit_is_an_empty_box() {
+        assert!(to_box(&()).unwrap().is_empty());
         #[derive(Serialize)]
         struct Unit;
-        assert!(matches!(to_box(&Unit), Err(Error::NotABox)));
+        assert!(to_box(&Unit).unwrap().is_empty());
     }
 
     #[test]

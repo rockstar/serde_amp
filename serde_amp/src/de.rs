@@ -7,7 +7,8 @@ use crate::Error;
 ///
 /// `T` must be a struct or a map, or a newtype or `Option` wrapping one. Each
 /// key/value pair becomes one field. A field holding an `Option` reads as
-/// `None` when its key is absent. Keys that `T` does not name are ignored.
+/// `None` when its key is absent. Keys that `T` does not name are ignored,
+/// and `()` or a unit struct reads from any box, ignoring every key.
 /// The crate README lists how every AMP type maps to a Rust type.
 ///
 /// Values are copied out of the box, so `T` must own its data: a `String`
@@ -69,7 +70,6 @@ impl<'de, 'a> de::Deserializer<'de> for BoxDeserializer<'a> {
         deserialize_string,
         deserialize_bytes,
         deserialize_byte_buf,
-        deserialize_unit,
         deserialize_seq,
         deserialize_identifier,
     }
@@ -78,12 +78,16 @@ impl<'de, 'a> de::Deserializer<'de> for BoxDeserializer<'a> {
         visitor.visit_some(self)
     }
 
+    fn deserialize_unit<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Error> {
+        visitor.visit_unit()
+    }
+
     fn deserialize_unit_struct<V: Visitor<'de>>(
         self,
         _name: &'static str,
-        _visitor: V,
+        visitor: V,
     ) -> Result<V::Value, Error> {
-        Err(Error::NotABox)
+        visitor.visit_unit()
     }
 
     fn deserialize_newtype_struct<V: Visitor<'de>>(
@@ -787,7 +791,17 @@ mod test {
         assert!(matches!(from_box::<u8>(&amp_box), Err(Error::NotABox)));
         assert!(matches!(from_box::<String>(&amp_box), Err(Error::NotABox)));
         assert!(matches!(from_box::<Vec<u8>>(&amp_box), Err(Error::NotABox)));
-        assert!(matches!(from_box::<()>(&amp_box), Err(Error::NotABox)));
+    }
+
+    #[test]
+    fn unit_reads_from_any_box() {
+        let mut amp_box = AmpBox::new();
+        amp_box.insert("v", "1").unwrap();
+        from_box::<()>(&amp_box).unwrap();
+        from_box::<()>(&AmpBox::new()).unwrap();
+        #[derive(Deserialize, Debug, PartialEq)]
+        struct Unit;
+        assert_eq!(from_box::<Unit>(&amp_box).unwrap(), Unit);
     }
 
     #[test]
