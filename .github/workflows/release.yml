@@ -6,7 +6,6 @@ on:
   push:
     tags:
       - "*-[0-9]+.[0-9]+.[0-9]+*"
-      - "*-v[0-9]+.[0-9]+.[0-9]+*"
 
 permissions:
   contents: read
@@ -28,7 +27,6 @@ jobs:
         run: |
           crate="${GITHUB_REF_NAME%-*}"
           version="${GITHUB_REF_NAME##*-}"
-          version="${version#v}"
           manifest_version="$(cargo metadata --no-deps --format-version 1 \
             | jq -r --arg crate "$crate" '.packages[] | select(.name == $crate) | .version')"
           echo "crate=$crate  tag version=$version  Cargo.toml version=${manifest_version:-<no such crate>}"
