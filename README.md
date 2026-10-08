@@ -13,6 +13,8 @@ details.
 |-------------------------------|----------------------------------------------------------------|
 | [amp-protocol](amp-protocol/) | The wire format, box type, and request/response message types |
 | [serde_amp](serde_amp/)  | [serde](https://serde.rs) serialization and deserialization of AMP boxes |
+| [tower-amp](tower-amp/)  | AMP servers and clients on [tower](https://github.com/tower-rs/tower) and [tokio](https://tokio.rs) |
+| [tower-amp-macros](tower-amp-macros/) | The `#[command]` attribute, re-exported by tower-amp |
 
 License
 --

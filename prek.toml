@@ -35,13 +35,13 @@ entry = "cargo test --workspace --all-features"
 types_or = ["rust", "toml", "markdown"]
 pass_filenames = false
 
-# XXX: rockstar (6 Oct 2026) - amp-protocol hasn't been released yet, so we can't
-# check against an existing version. Remove the --exclude after we've published
-# the first version.
+# XXX: rockstar (6 Oct 2026) - amp-protocol, tower-amp, and tower-amp-macros haven't been released
+# yet, so we can't check against an existing version. Remove each --exclude after
+# we've published that crate's first version.
 [[repos.hooks]]
 id = "cargo-semver-checks"
 name = "cargo semver-checks"
 language = "system"
-entry = "cargo semver-checks --workspace --exclude amp-protocol"
+entry = "cargo semver-checks --workspace --exclude amp-protocol --exclude tower-amp --exclude tower-amp-macros"
 types_or = ["rust", "toml"]
 pass_filenames = false

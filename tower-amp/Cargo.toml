@@ -1,0 +1,34 @@
+[package]
+name = "tower-amp"
+version = "0.1.0"
+description = "Build Asynchronous Messaging Protocol (AMP) servers and clients with tower and tokio"
+keywords = ["amp", "tower", "tokio", "twisted", "rpc"]
+categories = ["network-programming", "asynchronous"]
+readme = "README.md"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+include = [
+    "src/*.rs",
+    "examples/*.rs",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE-MIT",
+    "LICENSE-APACHE",
+]
+
+[dependencies]
+amp-protocol = { path = "../amp-protocol", version = "0.1", features = ["tokio"] }
+futures-util = { workspace = true, features = ["sink"] }
+serde = { workspace = true }
+serde_amp = { path = "../serde_amp", version = "0.3" }
+tokio = { workspace = true, features = ["rt", "net", "io-util", "sync", "macros"] }
+tokio-util = { workspace = true }
+tower = { workspace = true, features = ["util"] }
+tower-amp-macros = { path = "../tower-amp-macros", version = "0.1" }
+
+[dev-dependencies]
+serde = { workspace = true, features = ["derive"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
+tower = { workspace = true, features = ["timeout", "limit"] }

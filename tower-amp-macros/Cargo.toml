@@ -1,0 +1,26 @@
+[package]
+name = "tower-amp-macros"
+version = "0.1.0"
+description = "The #[command] attribute for tower-amp"
+keywords = ["amp", "tower", "macros"]
+categories = ["network-programming"]
+readme = "README.md"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+include = [
+    "src/*.rs",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE-MIT",
+    "LICENSE-APACHE",
+]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true }
