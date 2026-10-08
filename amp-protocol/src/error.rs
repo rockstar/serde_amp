@@ -32,6 +32,7 @@ pub enum Error {
     UnrecognizedBox,
     /// The underlying stream failed.
     #[cfg(feature = "tokio")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
     Io(std::io::Error),
 }
 
@@ -76,6 +77,7 @@ impl std::error::Error for Error {
 }
 
 #[cfg(feature = "tokio")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
         Error::Io(err)
